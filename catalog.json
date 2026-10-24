@@ -142,8 +142,10 @@
       ]
     }
   ],
-  "skills": 303,
+  "procedures": 300,
+  "packs": 30,
   "coreSkills": 3,
+  "registeredSkills": 33,
   "categories": [
     {
       "id": "planning",

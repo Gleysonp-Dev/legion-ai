@@ -17,8 +17,16 @@ test('installs and uninstalls cleanly into a sandbox home', () => {
   fs.mkdirSync(path.join(home, '.agents', 'skills', 'code-review'), { recursive: true });
   fs.writeFileSync(path.join(home, '.agents', 'skills', 'code-review', 'SKILL.md'), 'mine');
 
+  // simulate a skill left by a previous Legion version
+  fs.mkdirSync(path.join(home, '.legion'), { recursive: true });
+  const old = path.join(home, '.agents', 'skills', 'old-legion-skill');
+  fs.mkdirSync(old, { recursive: true });
+  fs.writeFileSync(path.join(old, '.legion-managed'), 'legion');
+  fs.writeFileSync(path.join(home, '.legion', 'install-manifest.json'), JSON.stringify({ version: 1, claude: {}, codex: { files: [old] } }));
+
   let r = run('--home', home, '--codex');
   assert.strictEqual(r.status, 0, r.stderr + r.stdout);
+  assert.ok(!fs.existsSync(old), 'stale skill from previous version should be removed');
   r = run('--home', home, '--claude', '--files');
   assert.strictEqual(r.status, 0, r.stderr + r.stdout);
 

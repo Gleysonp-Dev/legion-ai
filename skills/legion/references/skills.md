@@ -1,6 +1,6 @@
 # Legion skill registry
 
-303 skills (3 core + 300 catalog) in 30 categories.
+300 procedures in 30 packs + 3 core skills. Invoke the pack skill (e.g. `legion-testing`), then read `procedures/<name>.md` inside it.
 
 ## Core
 
@@ -8,7 +8,7 @@
 - `legion-help`
 - `legion-memory`
 
-## Planning & Delivery (`planning`) — agents: `conductor`, `task-splitter`, `project-manager`
+## Planning & Delivery — pack `legion-planning` — agents: `conductor`, `task-splitter`, `project-manager`
 
 - `project-kickoff` — Start a new project from an idea: goals, scope, stack, milestones and first tasks. Use when the user says "I want to build X" with no plan yet.
 - `work-breakdown` — Decompose a large task into small, independent work packages with dependencies and parallel waves. Use before handing big work to several agents.
@@ -21,7 +21,7 @@
 - `decision-matrix` — Compare options with a weighted decision matrix and recommend one. Use when choosing between tools, vendors, designs or strategies.
 - `okr-builder` — Draft OKRs (objectives and measurable key results) for a person, team or product. Use for quarterly goal-setting.
 
-## Architecture & System Design (`architecture`) — agents: `software-architect`, `microservices-engineer`, `database-architect`
+## Architecture & System Design — pack `legion-architecture` — agents: `software-architect`, `microservices-engineer`, `database-architect`
 
 - `system-design` — Design a system end to end: requirements, components, data flow, scaling and trade-offs with a diagram. Use for new products or interview-style design questions.
 - `adr-writer` — Write Architecture Decision Records documenting context, options, decision and consequences. Use whenever a significant technical decision is made.
@@ -34,7 +34,7 @@
 - `scalability-plan` — Plan how a system will handle 10x and 100x load: bottlenecks, scaling levers and capacity milestones. Use before growth or a big launch.
 - `tech-stack-selection` — Choose a technology stack for a project based on requirements, team skills, ecosystem and cost. Use when starting something new or replacing a core technology.
 
-## Frontend Development (`frontend`) — agents: `ui-engineer`, `react-specialist`, `css-stylist`, `frontend-architect`
+## Frontend Development — pack `legion-frontend` — agents: `ui-engineer`, `react-specialist`, `css-stylist`, `frontend-architect`
 
 - `build-landing-page` — Build a responsive, fast landing page with hero, benefits, social proof, pricing and CTA. Use for product launches and marketing sites.
 - `component-builder` — Create a reusable UI component with props API, variants, states, accessibility and tests. Use when adding buttons, modals, tables, dropdowns or any shared widget.
@@ -47,7 +47,7 @@
 - `tailwind-setup` — Set up or refactor Tailwind CSS with design tokens, theme config, component patterns and class organisation. Use for Tailwind projects or migrations to Tailwind.
 - `i18n-setup` — Internationalise a frontend: extract strings, set up i18n library, locale routing, plurals, dates and currencies. Use when a product must support multiple languages (e.g. PT-BR and EN).
 
-## Backend Development (`backend`) — agents: `backend-engineer`, `integration-engineer`, `auth-specialist`
+## Backend Development — pack `legion-backend` — agents: `backend-engineer`, `integration-engineer`, `auth-specialist`
 
 - `crud-service` — Implement a complete CRUD feature: model, validation, service layer, endpoints, pagination and tests. Use for new resources in a backend.
 - `background-jobs` — Add background jobs and queues (BullMQ, Celery, Sidekiq, cloud queues) with retries, idempotency and monitoring. Use for emails, reports, imports or slow work.
@@ -60,7 +60,7 @@
 - `config-management` — Organise application configuration and environment variables with validation, defaults and per-environment overrides. Use when config is scattered or deployments fail from missing variables.
 - `login-flow` — Implement signup, login, logout, password reset and email verification with secure sessions or a managed auth provider. Use when an app needs user accounts.
 
-## API Design & Integration (`api`) — agents: `api-designer`, `backend-engineer`, `integration-engineer`
+## API Design & Integration — pack `legion-api` — agents: `api-designer`, `backend-engineer`, `integration-engineer`
 
 - `rest-api-design` — Design a RESTful API with resources, methods, status codes, errors, pagination and filtering. Use before building endpoints.
 - `openapi-spec` — Write or generate an OpenAPI 3 specification with schemas, examples, security schemes and validation. Use to document an API or generate clients.
@@ -73,7 +73,7 @@
 - `api-docs-portal` — Produce developer-friendly API documentation: quickstart, auth guide, reference and code samples. Use when external developers will use the API.
 - `grpc-service` — Design and implement gRPC services with protobuf schemas, streaming, deadlines and error codes. Use for high-performance internal service communication.
 
-## Databases & Data Modelling (`database`) — agents: `database-architect`, `backend-engineer`
+## Databases & Data Modelling — pack `legion-database` — agents: `database-architect`, `backend-engineer`
 
 - `schema-design` — Design a relational schema with tables, keys, constraints, relationships and indexes from requirements. Use when starting a data model.
 - `migration-writer` — Write safe database migrations, including zero-downtime changes (expand/contract) and rollback scripts. Use for any schema change in production.
@@ -86,7 +86,7 @@
 - `postgres-tuning` — Tune PostgreSQL: configuration, connection pooling, vacuum, indexes, partitioning and monitoring. Use when Postgres is slow or overloaded.
 - `data-integrity-audit` — Audit a database for integrity problems: orphans, duplicates, invalid values and missing constraints. Use before migrations or when data looks wrong.
 
-## Testing (`testing`) — agents: `test-architect`, `unit-tester`, `e2e-tester`, `qa-gatekeeper`
+## Testing — pack `legion-testing` — agents: `test-architect`, `unit-tester`, `e2e-tester`, `qa-gatekeeper`
 
 - `write-unit-tests` — Write unit tests for a function, class or module covering behaviour, edge cases and errors. Use when code lacks tests.
 - `tdd-cycle` — Develop a feature test-first with red-green-refactor cycles. Use when building logic-heavy code where correctness matters.
@@ -99,7 +99,7 @@
 - `property-based-testing` — Use property-based testing (fast-check, Hypothesis) to find edge cases automatically. Use for parsers, algorithms, serializers and financial calculations.
 - `manual-test-plan` — Write a manual QA test plan with test cases, steps, expected results and devices. Use before releases when automation is incomplete.
 
-## Debugging & Troubleshooting (`debugging`) — agents: `debugger`, `observability-engineer`
+## Debugging & Troubleshooting — pack `legion-debugging` — agents: `debugger`, `observability-engineer`
 
 - `root-cause-analysis` — Find the root cause of a bug systematically: reproduce, hypothesise, test, fix and prevent. Use for any bug whose cause is unclear.
 - `stack-trace-reader` — Read and explain stack traces and error messages, locate the failing code and propose fixes. Use when the user pastes an error.
@@ -112,7 +112,7 @@
 - `environment-issues` — Fix "works on my machine" problems: versions, env vars, paths, OS differences and dependency mismatches. Use when code behaves differently across machines or CI.
 - `crash-report-triage` — Triage crash and error reports (Sentry, Crashlytics) by frequency, impact and root cause. Use when there are many errors and limited time.
 
-## Code Quality & Refactoring (`code-quality`) — agents: `code-reviewer`, `refactoring-expert`, `legacy-modernizer`
+## Code Quality & Refactoring — pack `legion-code-quality` — agents: `code-reviewer`, `refactoring-expert`, `legacy-modernizer`
 
 - `code-review` — Review a diff or pull request for correctness, security, performance, readability and tests with prioritised comments. Use before merging.
 - `refactor-safely` — Refactor code in small verified steps without changing behaviour. Use when code is hard to read or change.
@@ -125,7 +125,7 @@
 - `framework-upgrade` — Upgrade a framework or language version (React, Next, Django, Node, Python) following official migration guides. Use for major version upgrades.
 - `coding-standards` — Write a coding standards guide for a project from its existing conventions. Use to onboard developers or align a team.
 
-## Security (defensive) (`security`) — agents: `security-auditor`, `appsec-engineer`, `secrets-guardian`, `threat-modeler`
+## Security (defensive) — pack `legion-security` — agents: `security-auditor`, `appsec-engineer`, `secrets-guardian`, `threat-modeler`
 
 - `security-review` — Run a defensive security review of your own code against OWASP Top 10 with severity and fixes. Use before releases or after big changes.
 - `owasp-checklist` — Walk through the OWASP Top 10 and ASVS checklist for a web app and record pass/fail with evidence. Use for structured security assessments.
@@ -138,7 +138,7 @@
 - `encryption-setup` — Apply encryption correctly: TLS everywhere, encryption at rest, key management and password hashing. Use when storing or transmitting sensitive data.
 - `security-incident-response` — Respond to a suspected security incident in your own systems: contain, preserve evidence, eradicate, recover and notify. Use when a breach or compromise is suspected.
 
-## DevOps & CI/CD (`devops`) — agents: `devops-engineer`, `ci-cd-engineer`, `container-specialist`, `release-manager`
+## DevOps & CI/CD — pack `legion-devops` — agents: `devops-engineer`, `ci-cd-engineer`, `container-specialist`, `release-manager`
 
 - `github-actions-ci` — Create a GitHub Actions CI pipeline with lint, test, build, caching and matrix builds. Use for any repo without CI.
 - `dockerize-app` — Containerise an application with a small, secure multi-stage Dockerfile and docker-compose for local development. Use to run an app anywhere.
@@ -151,7 +151,7 @@
 - `pre-commit-hooks` — Set up pre-commit hooks for formatting, linting, tests and secret scanning (husky, lefthook, pre-commit). Use to catch problems before they reach CI.
 - `monorepo-setup` — Organise a monorepo with workspaces, shared packages, task caching (Turborepo, Nx, pnpm) and CI filtering. Use when multiple apps share code.
 
-## Cloud & Infrastructure (`cloud`) — agents: `cloud-architect`, `cloud-security-engineer`, `cost-optimizer`, `devops-engineer`
+## Cloud & Infrastructure — pack `legion-cloud` — agents: `cloud-architect`, `cloud-security-engineer`, `cost-optimizer`, `devops-engineer`
 
 - `aws-architecture` — Design AWS architectures using managed services (Lambda, ECS, RDS, S3, CloudFront, SQS) with IAM and networking. Use for building on AWS.
 - `gcp-architecture` — Design Google Cloud architectures (Cloud Run, GKE, Cloud SQL, Pub/Sub, BigQuery, Firebase). Use for building on GCP.
@@ -164,7 +164,7 @@
 - `disaster-recovery` — Plan disaster recovery: RPO/RTO, backups, multi-region failover and recovery drills. Use for business-critical systems.
 - `vps-setup` — Set up a VPS (Hetzner, DigitalOcean, Lightsail) securely with SSH keys, firewall, updates, reverse proxy and TLS. Use for simple self-hosting.
 
-## Performance (`performance`) — agents: `performance-engineer`, `web-performance-tuner`
+## Performance — pack `legion-performance` — agents: `performance-engineer`, `web-performance-tuner`
 
 - `profile-app` — Profile an application (CPU, memory, I/O) with the right tools for the language to find real bottlenecks. Use before optimising anything.
 - `core-web-vitals` — Improve Core Web Vitals (LCP, INP, CLS) using Lighthouse and field data. Use when a site scores poorly or ranks badly.
@@ -177,7 +177,7 @@
 - `startup-time` — Reduce startup time of apps, CLIs, servers or mobile apps through lazy loading and deferring work. Use when launch is slow.
 - `cost-performance-tradeoff` — Balance performance against infrastructure cost: right instance sizes, autoscaling and caching ROI. Use when scaling decisions affect budget.
 
-## Reliability & Observability (`reliability`) — agents: `sre-engineer`, `observability-engineer`
+## Reliability & Observability — pack `legion-reliability` — agents: `sre-engineer`, `observability-engineer`
 
 - `slo-definition` — Define SLIs, SLOs and error budgets from user-facing behaviour. Use to set reliability targets.
 - `logging-setup` — Set up structured logging with levels, correlation IDs, redaction and centralised collection. Use when logs are hard to search.
@@ -190,7 +190,7 @@
 - `chaos-testing` — Run controlled chaos experiments (kill instances, add latency, drop dependencies) to validate resilience. Use for systems claiming high availability.
 - `uptime-monitoring` — Set up external uptime and synthetic monitoring for sites, APIs and SSL expiry. Use for any public service.
 
-## Data Engineering (`data-engineering`) — agents: `data-engineer`, `analytics-engineer`, `database-architect`
+## Data Engineering — pack `legion-data-engineering` — agents: `data-engineer`, `analytics-engineer`, `database-architect`
 
 - `etl-pipeline` — Build an ETL/ELT pipeline from sources to a warehouse with idempotent loads, scheduling and quality checks. Use to centralise data.
 - `data-quality-checks` — Add data quality tests (Great Expectations, dbt tests, Soda) for nulls, uniqueness, ranges and freshness. Use when data cannot be trusted.
@@ -203,7 +203,7 @@
 - `data-catalog` — Document datasets: data dictionary, owners, lineage, freshness and sensitivity classification. Use when people do not know what data exists.
 - `change-data-capture` — Set up change data capture (Debezium, logical replication, Fivetran) to stream database changes downstream. Use to sync databases or feed warehouses in near real time.
 
-## Data Analysis & Visualisation (`data-analysis`) — agents: `data-analyst`, `data-visualizer`, `analytics-engineer`
+## Data Analysis & Visualisation — pack `legion-data-analysis` — agents: `data-analyst`, `data-visualizer`, `analytics-engineer`
 
 - `exploratory-analysis` — Run exploratory data analysis: profile, distributions, correlations, outliers and first insights. Use when receiving a new dataset.
 - `ab-test-analysis` — Analyse A/B tests correctly: sample size, significance, confidence intervals, guardrail metrics and peeking pitfalls. Use to decide if an experiment won.
@@ -216,7 +216,7 @@
 - `survey-analysis` — Analyse survey results: response rates, Likert scales, cross-tabs, open-text themes and bias. Use after collecting survey data.
 - `spreadsheet-analysis` — Analyse data in spreadsheets with formulas, pivot tables and charts. Use for Excel or Google Sheets analysis.
 
-## Machine Learning (`ml`) — agents: `ml-engineer`, `data-engineer`
+## Machine Learning — pack `legion-ml` — agents: `ml-engineer`, `data-engineer`
 
 - `ml-baseline` — Build a quick, honest ML baseline with proper splits and metrics before trying complex models. Use at the start of any ML project.
 - `feature-engineering` — Create and select features: encoding, scaling, aggregations, time features and leakage checks. Use to improve model performance.
@@ -229,7 +229,7 @@
 - `anomaly-detection` — Detect anomalies in metrics, transactions or sensor data with statistical and ML methods. Use for fraud, monitoring or IoT alerts.
 - `ml-experiment-tracking` — Set up experiment tracking (MLflow, Weights & Biases) for parameters, metrics, artifacts and data versions. Use when experiments are hard to compare.
 
-## LLMs, Agents & Prompting (`llm`) — agents: `llm-engineer`, `prompt-engineer`, `rag-specialist`
+## LLMs, Agents & Prompting — pack `legion-llm` — agents: `llm-engineer`, `prompt-engineer`, `rag-specialist`
 
 - `prompt-optimizer` — Improve a prompt with clear instructions, context, examples and output format, tested on sample inputs. Use when an AI gives inconsistent results.
 - `system-prompt-writer` — Write a system prompt for a chatbot or agent: role, tone, capabilities, boundaries, tools and response format. Use when building an assistant.
@@ -242,7 +242,7 @@
 - `claude-skill-writer` — Write a new Agent Skill (SKILL.md with name and description frontmatter) that works in Claude Code and Codex. Use to teach the assistant a repeatable procedure.
 - `ai-safety-guardrails` — Add guardrails to AI features: input/output filtering, prompt-injection defences, PII handling and human review. Use before exposing LLM features to users.
 
-## Mobile Development (`mobile`) — agents: `mobile-engineer`, `ui-designer`, `release-manager`
+## Mobile Development — pack `legion-mobile` — agents: `mobile-engineer`, `ui-designer`, `release-manager`
 
 - `react-native-app` — Build or extend a React Native / Expo app with navigation, state, native modules and builds. Use for cross-platform mobile apps in JavaScript/TypeScript.
 - `flutter-app` — Build Flutter apps with widgets, state management, theming and platform channels. Use for Flutter/Dart projects.
@@ -255,7 +255,7 @@
 - `deep-linking` — Set up deep links and universal/app links with routing, fallbacks and attribution. Use for sharing links and marketing campaigns.
 - `mobile-analytics` — Instrument mobile analytics and crash reporting with privacy-respecting event tracking. Use to understand app usage.
 
-## Git & Collaboration (`git`) — agents: `release-manager`, `code-reviewer`, `devops-engineer`
+## Git & Collaboration — pack `legion-git` — agents: `release-manager`, `code-reviewer`, `devops-engineer`
 
 - `commit-message` — Write clear conventional commit messages from staged changes. Use before committing.
 - `pull-request-writer` — Write a pull request description with summary, changes, testing evidence, screenshots and risks. Use when opening a PR.
@@ -268,7 +268,7 @@
 - `open-source-launch` — Prepare a project for open-source release: licence, docs, contribution guide, code of conduct, issue labels and announcement. Use before publishing a project publicly.
 - `github-issues-triage` — Triage GitHub issues: label, deduplicate, prioritise, request info and close stale ones. Use for busy repositories.
 
-## Documentation (`docs`) — agents: `technical-writer`, `documentation-engineer`
+## Documentation — pack `legion-docs` — agents: `technical-writer`, `documentation-engineer`
 
 - `readme-writer` — Write a great README: what it is, why, install, quick start, usage, configuration, contributing and licence. Use for any project.
 - `api-reference-docs` — Generate and polish API reference docs from code or OpenAPI specs. Use when developers need complete reference material.
@@ -281,7 +281,7 @@
 - `diagram-as-code` — Create diagrams as code with Mermaid, PlantUML or D2: flowcharts, sequence, ER, state and architecture diagrams. Use to explain flows visually.
 - `docs-audit` — Audit documentation for outdated content, broken links, gaps and inconsistencies. Use periodically.
 
-## UX, UI & Accessibility (`ux-design`) — agents: `ux-designer`, `ui-designer`, `accessibility-expert`, `design-system-builder`, `ux-researcher`
+## UX, UI & Accessibility — pack `legion-ux-design` — agents: `ux-designer`, `ui-designer`, `accessibility-expert`, `design-system-builder`, `ux-researcher`
 
 - `user-flow` — Map user flows for a task from entry to success, including errors and alternatives. Use before designing screens.
 - `wireframe` — Create low-fidelity wireframes (ASCII, Mermaid or simple HTML) for key screens with annotations. Use to agree layout before visual design.
@@ -294,7 +294,7 @@
 - `usability-test-plan` — Plan and run usability tests: tasks, script, recruitment, metrics and synthesis. Use to validate designs with users.
 - `design-critique` — Critique a design or screenshot constructively: goals, hierarchy, clarity, consistency, accessibility. Use for feedback on mockups.
 
-## Product Management (`product`) — agents: `product-manager`, `requirements-analyst`, `roadmap-planner`, `ux-researcher`
+## Product Management — pack `legion-product` — agents: `product-manager`, `requirements-analyst`, `roadmap-planner`, `ux-researcher`
 
 - `prd-writer` — Write a product requirements document: problem, goals, users, stories, scope, metrics and open questions. Use when defining a feature.
 - `user-stories` — Write user stories with acceptance criteria (Given/When/Then) and split them to be small. Use for backlog creation.
@@ -307,7 +307,7 @@
 - `roadmap-builder` — Build a Now/Next/Later roadmap with themes, outcomes and dependencies. Use for planning communication.
 - `launch-plan` — Plan a product or feature launch: readiness checklist, messaging, channels, timeline and success metrics. Use before going live.
 
-## Marketing & Growth (`marketing`) — agents: `growth-strategist`, `seo-specialist`, `social-media-manager`, `content-strategist`
+## Marketing & Growth — pack `legion-marketing` — agents: `growth-strategist`, `seo-specialist`, `social-media-manager`, `content-strategist`
 
 - `seo-audit` — Audit a website's SEO: technical issues, on-page factors, content gaps and quick wins. Use to increase organic traffic.
 - `keyword-research` — Research keywords by intent, volume and difficulty and map them to pages. Use for content and SEO planning.
@@ -320,7 +320,7 @@
 - `brand-voice` — Define a brand voice and tone guide with traits, do/don't examples and vocabulary. Use to keep communication consistent.
 - `analytics-tracking-plan` — Create a marketing analytics tracking plan with UTM conventions, events, conversions and attribution. Use before campaigns.
 
-## Writing & Communication (`writing`) — agents: `copywriter`, `content-strategist`, `translator`, `technical-writer`
+## Writing & Communication — pack `legion-writing` — agents: `copywriter`, `content-strategist`, `translator`, `technical-writer`
 
 - `blog-post` — Write a well-structured blog post with hook, clear sections, examples and SEO basics. Use for content marketing or thought leadership.
 - `email-writer` — Write clear professional emails: requests, follow-ups, updates, apologies and negotiations. Use for any important email.
@@ -333,7 +333,7 @@
 - `newsletter` — Write a newsletter issue with sections, curated links, commentary and a CTA. Use for regular audience updates.
 - `tone-adapter` — Adapt a text to a different tone or audience (formal, casual, technical, executive, friendly) without changing facts. Use when the same message must reach different readers.
 
-## Research & Analysis (`research`) — agents: `research-analyst`, `market-researcher`
+## Research & Analysis — pack `legion-research` — agents: `research-analyst`, `market-researcher`
 
 - `deep-research` — Research a question in depth using multiple sources, compare evidence and produce a cited report with confidence levels. Use for complex questions.
 - `fact-check` — Verify claims against reliable sources and rate them true, false, misleading or unverified. Use before publishing or deciding.
@@ -346,7 +346,7 @@
 - `swot-analysis` — Build a SWOT analysis with evidence and turn it into strategic actions. Use for strategy planning.
 - `source-evaluation` — Evaluate the credibility of sources: authority, methodology, bias, recency and corroboration. Use when sources conflict.
 
-## Business & Finance (`business-finance`) — agents: `business-analyst`, `financial-analyst`, `project-manager`
+## Business & Finance — pack `legion-business-finance` — agents: `business-analyst`, `financial-analyst`, `project-manager`
 
 - `business-plan` — Write a business plan: problem, solution, market, model, go-to-market, operations, team, financials and risks. Use for starting a business or seeking funding.
 - `financial-model` — Build a financial model with revenue, costs, cash flow, scenarios and sensitivity in a spreadsheet. Use for planning and fundraising (not personalised financial advice).
@@ -359,7 +359,7 @@
 - `kpi-definition` — Define business KPIs with formulas, data sources, owners, targets and review cadence. Use to manage performance.
 - `startup-validation` — Validate a startup idea quickly: problem interviews, landing page tests, pre-sales and success criteria. Use before building.
 
-## Productivity & Automation (`productivity`) — agents: `operations-automator`, `presentation-designer`, `project-manager`
+## Productivity & Automation — pack `legion-productivity` — agents: `operations-automator`, `presentation-designer`, `project-manager`
 
 - `automate-task` — Automate a repetitive computer task with a script (Python, Node, Bash, PowerShell) that runs on Windows, Mac or Linux. Use when someone repeats the same steps often.
 - `file-organizer` — Organise files and folders: rename in bulk, sort by type or date, deduplicate and archive. Use to clean up messy folders.
@@ -372,7 +372,7 @@
 - `email-triage` — Triage an inbox: categorise, prioritise, draft replies and set up filters. Use when email is overwhelming.
 - `shell-scripting` — Write robust shell scripts (Bash, PowerShell) with argument parsing, error handling, logging and portability. Use for command-line automation.
 
-## Legal, Privacy & Compliance (not legal advice) (`legal-privacy`) — agents: `legal-researcher`, `privacy-engineer`, `compliance-analyst`
+## Legal, Privacy & Compliance (not legal advice) — pack `legion-legal-privacy` — agents: `legal-researcher`, `privacy-engineer`, `compliance-analyst`
 
 - `privacy-policy` — Draft a privacy policy reflecting actual data practices, LGPD/GDPR/CCPA disclosures and user rights, marked for legal review. Use when launching an app or site.
 - `terms-of-service` — Draft terms of service covering usage, accounts, payments, IP, liability and termination, marked for legal review. Use for apps and SaaS.
@@ -385,7 +385,7 @@
 - `license-compliance` — Check open-source licence compatibility for a project and its dependencies. Use before distributing software.
 - `security-questionnaire` — Answer customer security questionnaires accurately from existing policies and evidence. Use in enterprise sales.
 
-## IoT & Embedded (`iot`) — agents: `iot-engineer`, `realtime-engineer`, `data-visualizer`
+## IoT & Embedded — pack `legion-iot` — agents: `iot-engineer`, `realtime-engineer`, `data-visualizer`
 
 - `esp32-firmware` — Write ESP32 firmware (Arduino or ESP-IDF) with Wi-Fi reconnection, sensors, deep sleep, watchdog and OTA. Use for connected devices.
 - `mqtt-architecture` — Design MQTT topic structure, payload schemas, QoS, retained messages and broker security. Use for IoT messaging.

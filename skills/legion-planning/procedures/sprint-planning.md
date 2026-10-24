@@ -1,0 +1,21 @@
+# Sprint Planning
+
+> Legion procedure `sprint-planning` · pack **Planning & Delivery** (`legion-planning`)
+
+## When to use
+Plan a sprint or week of work: pick backlog items by priority and capacity, define a sprint goal and daily plan. Use at the start of an iteration.
+
+## Procedure
+1. Confirm available capacity (people × days, minus meetings and holidays).
+2. Choose a single sprint goal that delivers user value.
+3. Pull top-priority items that serve the goal until capacity is ~80% used.
+4. Split items that are too large; make acceptance criteria explicit.
+5. Identify dependencies and risks to raise in stand-ups.
+
+## Quality checklist
+- [ ] Sprint goal stated
+- [ ] capacity not overbooked
+- [ ] every item has acceptance criteria
+
+## Output
+A sprint plan with goal, items, owners and risks.

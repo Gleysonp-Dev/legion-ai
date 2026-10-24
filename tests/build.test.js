@@ -23,8 +23,30 @@ test('has 80 agents in 10 teams', () => {
   assert.strictEqual(stats.teams, 10);
 });
 
-test('has more than 300 skills', () => {
-  assert.ok(stats.skills > 300, `only ${stats.skills}`);
+test('has 300 procedures in 30 packs and few registered skills', () => {
+  assert.ok(stats.procedures >= 300, `only ${stats.procedures}`);
+  assert.strictEqual(stats.packs, 30);
+  assert.ok(stats.registeredSkills <= 40, 'too many registered skills inflate context cost');
+  for (const d of fs.readdirSync(path.join(ROOT, 'skills')).filter(d => d.startsWith('legion-') && !['legion-help', 'legion-memory'].includes(d))) {
+    const procs = fs.readdirSync(path.join(ROOT, 'skills', d, 'procedures'));
+    assert.ok(procs.length >= 10, d);
+    const body = fs.readFileSync(path.join(ROOT, 'skills', d, 'SKILL.md'), 'utf8');
+    for (const p of procs) assert.ok(body.includes('`' + p.replace(/\.md$/, '') + '`'), `${d} index misses ${p}`);
+  }
+});
+
+test('always-on descriptions stay small', () => {
+  let chars = 0;
+  for (const d of fs.readdirSync(path.join(ROOT, 'skills'))) chars += frontmatter(path.join(ROOT, 'skills', d, 'SKILL.md')).description.length;
+  for (const f of fs.readdirSync(path.join(ROOT, 'agents'))) chars += frontmatter(path.join(ROOT, 'agents', f)).description.length;
+  // roughly 4 characters per token
+  assert.ok(chars / 4 < 12000, `about ${Math.round(chars / 4)} tokens of descriptions`);
+});
+
+test('every agent has a valid model tier', () => {
+  for (const f of fs.readdirSync(path.join(ROOT, 'agents'))) {
+    assert.match(frontmatter(path.join(ROOT, 'agents', f)).model, /^(haiku|sonnet|opus|inherit)$/, f);
+  }
 });
 
 test('every Claude agent has valid frontmatter', () => {

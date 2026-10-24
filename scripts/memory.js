@@ -273,6 +273,7 @@ async function hook(event) {
     return;
   }
   if (event === 'prompt') {
+    if (input.transcript_path) d.session = { transcript: input.transcript_path, id: input.session_id || null, updated: now() };
     const saved = handlePrompt(d, input.prompt || input.user_prompt || '');
     save(d);
     if (saved.length) process.stdout.write(`<legion-memory-update>Saved lasting preference(s): ${saved.map(s => `"${s}"`).join('; ')}. Apply from now on; mention it briefly to the user.</legion-memory-update>\n`);
@@ -285,6 +286,103 @@ async function hook(event) {
     if (tool === 'Skill') bump(d.usage.skills, String(ti.skill || ti.command || ti.name || '').replace(/^legion:/, ''));
     save(d);
   }
+}
+
+/* ---------------- cost report ---------------- */
+
+function readJsonl(file) {
+  const out = [];
+  let text = '';
+  try { text = fs.readFileSync(file, 'utf8'); } catch { return out; }
+  for (const line of text.split('\n')) { if (!line.trim()) continue; try { out.push(JSON.parse(line)); } catch { /* skip */ } }
+  return out;
+}
+
+// Claude Code transcript: sum main-thread usage and Task/Agent sub-agent totals.
+function claudeUsage(file) {
+  const rows = readJsonl(file);
+  const seen = new Set();
+  const main = { input: 0, cacheWrite: 0, cacheRead: 0, output: 0, turns: 0 };
+  const toolAgent = {};
+  const agents = {};
+  for (const r of rows) {
+    const msg = r.message || {};
+    if (r.type === 'assistant' && msg.usage) {
+      const key = (msg.id || '') + '|' + (r.requestId || '');
+      if (!seen.has(key)) {
+        seen.add(key);
+        const u = msg.usage;
+        main.input += u.input_tokens || 0; main.cacheWrite += u.cache_creation_input_tokens || 0;
+        main.cacheRead += u.cache_read_input_tokens || 0; main.output += u.output_tokens || 0; main.turns++;
+      }
+      for (const b of Array.isArray(msg.content) ? msg.content : []) {
+        if (b && b.type === 'tool_use' && /^(Task|Agent)$/.test(b.name || '')) toolAgent[b.id] = String((b.input && (b.input.subagent_type || b.input.agent)) || 'general').replace(/^legion:/, '');
+      }
+    }
+    const tr = r.toolUseResult;
+    if (tr && typeof tr === 'object' && (tr.totalTokens || tr.totalDurationMs)) {
+      let id = null;
+      for (const b of Array.isArray(msg.content) ? msg.content : []) if (b && b.type === 'tool_result') id = b.tool_use_id;
+      const name = toolAgent[id] || tr.agentType || 'subagent';
+      const a = agents[name] || (agents[name] = { calls: 0, tokens: 0, ms: 0, tools: 0 });
+      a.calls++; a.tokens += tr.totalTokens || 0; a.ms += tr.totalDurationMs || 0; a.tools += tr.totalToolUseCount || 0;
+    }
+  }
+  return { tool: 'Claude Code', file, main, agents };
+}
+
+function newestFile(dir, re, depth = 4) {
+  let best = null;
+  const walk = (d, n) => {
+    let ents = []; try { ents = fs.readdirSync(d, { withFileTypes: true }); } catch { return; }
+    for (const e of ents) {
+      const p = path.join(d, e.name);
+      if (e.isDirectory() && n > 0) walk(p, n - 1);
+      else if (e.isFile() && re.test(e.name)) { const t = fs.statSync(p).mtimeMs; if (!best || t > best.t) best = { p, t }; }
+    }
+  };
+  walk(dir, depth);
+  return best && best.p;
+}
+
+// Codex session log: last token_count event holds the session totals.
+function codexUsage(file) {
+  let total = null;
+  for (const r of readJsonl(file)) {
+    const pl = r.payload || r;
+    if (pl && pl.type === 'token_count' && pl.info && pl.info.total_token_usage) total = pl.info.total_token_usage;
+  }
+  if (!total) return null;
+  return { tool: 'Codex', file, main: { input: (total.input_tokens || 0) - (total.cached_input_tokens || 0), cacheWrite: 0, cacheRead: total.cached_input_tokens || 0, output: (total.output_tokens || 0) + (total.reasoning_output_tokens || 0), turns: null }, agents: {} };
+}
+
+const fmt = n => n >= 1e6 ? (n / 1e6).toFixed(2) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(1) + 'k' : String(n);
+
+function report(d, args) {
+  let u = null;
+  const forced = arg(args, '--transcript');
+  const codex = args.includes('--codex');
+  if (forced) u = /codex/i.test(forced) ? codexUsage(forced) : claudeUsage(forced);
+  else if (!codex && d.session && d.session.transcript && fs.existsSync(d.session.transcript)) u = claudeUsage(d.session.transcript);
+  if (!u) {
+    const f = newestFile(path.join(process.env.CODEX_HOME || path.join(os.homedir(), '.codex'), 'sessions'), /\.jsonl$/);
+    if (f) u = codexUsage(f);
+  }
+  if (!u) return 'No session log found yet. In Claude Code the report works after your first message with Legion installed; in Codex after a session has run.';
+  if (args.includes('--json')) return JSON.stringify(u, null, 2);
+  const m = u.main;
+  const fresh = m.input + m.cacheWrite + m.output;
+  const agentTotal = Object.values(u.agents).reduce((s, a) => s + a.tokens, 0);
+  const lines = [`Legion cost report — ${u.tool} session`, ''];
+  lines.push(`Main conversation: ${fmt(fresh)} new tokens (input ${fmt(m.input + m.cacheWrite)}, output ${fmt(m.output)})` + (m.turns != null ? ` over ${m.turns} model calls` : ''));
+  lines.push(`Re-read from cache: ${fmt(m.cacheRead)} tokens (billed at a fraction of normal input)`);
+  const names = Object.keys(u.agents).sort((a, b) => u.agents[b].tokens - u.agents[a].tokens);
+  if (names.length) {
+    lines.push('', `Agents: ${fmt(agentTotal)} tokens in ${names.reduce((s, n) => s + u.agents[n].calls, 0)} runs`);
+    for (const n of names) { const a = u.agents[n]; lines.push(`  ${n.padEnd(26)} ${String(a.calls).padStart(2)}×  ${fmt(a.tokens).padStart(7)} tokens  ${(a.ms / 1000).toFixed(0).padStart(4)}s  ${a.tools} tool calls`); }
+  } else lines.push('', 'Agents: none used in this session.');
+  lines.push('', `Total processed: ${fmt(fresh + m.cacheRead + agentTotal)} tokens`);
+  return lines.join('\n');
 }
 
 /* ---------------- CLI ---------------- */
@@ -300,6 +398,7 @@ Usage: node memory.js <command>
   observe "<text>"              record a candidate preference
   learn                         promote repeated observations
   forget <id|text>              remove a rule or observation
+  report [--json] [--codex]     token/cost report for the current session (main thread + each agent)
   export                        print everything as JSON
   reset --yes                   wipe memory
   hook <session-start|prompt|post-tool>   (used by Claude Code hooks; reads JSON on stdin)
@@ -322,6 +421,7 @@ async function main(argv) {
     }
     case 'learn': { const p = learn(d); save(d); console.log(p.length ? `Promoted ${p.length}:\n- ${p.join('\n- ')}` : 'Nothing to promote.'); break; }
     case 'forget': { const n = forget(d, positional(args)); save(d); console.log(n ? `Removed ${n} item(s).` : 'Nothing matched.'); break; }
+    case 'report': console.log(report(d, args)); break;
     case 'export': console.log(JSON.stringify(d, null, 2)); break;
     case 'reset':
       if (!args.includes('--yes')) { console.error('Add --yes to confirm wiping Legion memory.'); process.exitCode = 1; break; }
@@ -336,4 +436,4 @@ async function main(argv) {
 if (require.main === module) {
   main(process.argv.slice(2)).catch(e => { console.error(e.message); process.exitCode = 1; });
 }
-module.exports = { ensureCli, extractPreferences, detectLang, isSensitive, categorize, addRule, observe, forget, learn, handlePrompt, renderProfile, empty, context };
+module.exports = { claudeUsage, codexUsage, report, ensureCli, extractPreferences, detectLang, isSensitive, categorize, addRule, observe, forget, learn, handlePrompt, renderProfile, empty, context };

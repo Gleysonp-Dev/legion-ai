@@ -2,8 +2,8 @@
 
 Thanks for helping! Legion is plain text plus two small Node scripts, so contributing is easy.
 
-## Add or improve a skill
-1. Open the right file in `src/skills/` (one file holds three categories).
+## Add or improve a procedure
+1. Open the right file in `src/skills/` (one file holds three categories; each category becomes a `legion-<category>` pack).
 2. Add a block:
    ```
    ## my-skill-name

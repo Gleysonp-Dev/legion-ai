@@ -1,58 +1,75 @@
 ---
 name: legion
-description: "Orchestrate Legion's 80 specialist agents: split a large or multi-part task into subtasks, dispatch them in parallel to the right agents, integrate and verify the result. Use for big projects, multi-step builds, audits or anything that spans several specialties, or when the user says /legion or 'use the legion'."
+description: "Orchestrate Legion's 80 specialist agents: split a large or multi-part task into subtasks, run them in parallel on the right agents, integrate, prove the result with evidence and report the token cost. Use for big projects, multi-step builds or audits, or when the user says /legion or 'use legion'. Add 'lite' or 'full' to control how many agents run."
 ---
 
 # Legion — multi-agent orchestration
 
-You (the main session) are the **conductor**. Subagents cannot spawn other subagents, so the dispatching always happens here, in the main thread.
+You (the main session) are the **conductor**. Subagents cannot spawn other subagents, so all dispatching happens here.
 
-## 0. Load the user's memory
-Run `node ~/.legion/bin/memory.js context` (Windows: `node %USERPROFILE%\.legion\bin\memory.js context`). Apply the preferences it prints — language, tone, stack, formats — to every step and pass the relevant ones to every agent you dispatch. If the command is missing, continue without memory.
+Legion's promise to the user: **the team proves what it did and shows what it cost.**
 
-## 1. Decide if orchestration is worth it
-- **Small task** (one specialty, a few files): do it yourself or call one agent. Do not spin up a team for a one-line fix.
-- **Medium task** (2–3 specialties): call 2–4 agents.
-- **Large task** (many specialties, many files, research + build + review): full Legion flow below.
+## 0. Load memory
+Run `node ~/.legion/bin/memory.js context` and apply the preferences it prints (language, tone, stack, formats). Pass the relevant ones to each agent. If the command is missing, continue without memory.
+
+## 1. Pick a mode (cost control)
+| Mode | When | Agents |
+|---|---|---|
+| **solo** | one specialty, a few files, quick fix | none — do it yourself with the matching `legion-<pack>` skill |
+| **lite** (default for medium tasks) | 2–3 specialties | at most 3 agents, one wave, you verify |
+| **full** | big build, audit or research + build + review | as many as needed, in waves, plus `qa-gatekeeper` |
+
+If the user wrote `lite` or `full`, obey. Otherwise choose the cheapest mode that can do the job well and say which one you picked in one line. Never start a team for something solo can do.
 
 ## 2. Plan
 1. Restate the goal, constraints and definition of done in 3–5 lines.
-2. If the repository is unfamiliar, dispatch `context-scout` first.
-3. Read `references/agents.md` (agent registry) and, if useful, `references/skills.md` (skill registry).
-4. Build a dispatch plan — optionally ask the `conductor` agent to draft it for very large jobs:
+2. Unfamiliar repository → dispatch `context-scout` first (it runs on a fast, cheap model).
+3. Read `references/agents.md` to choose agents; `references/skills.md` lists the 30 packs and 300 procedures.
+4. Write the dispatch table:
 
-| id | subtask | agent | depends on | wave | acceptance criteria |
-|----|---------|-------|-----------|------|---------------------|
+| id | subtask | agent | depends on | wave | acceptance criteria (how we will prove it) |
+|----|---------|-------|-----------|------|---------------------------------------------|
 
-Rules: smallest set of agents that covers the work; each subtask has one owner; subtasks in the same wave must not edit the same files.
+Rules: fewest agents that cover the work; one owner per subtask; subtasks in the same wave never edit the same files; every acceptance criterion must be checkable (a command, a test, a file, a source).
 
 ## 3. Dispatch in waves
-- **Claude Code:** launch every subtask of a wave **in the same message** with the Agent/Task tool (`subagent_type` = agent name; plugin agents may be listed as `legion:<name>`). Give each agent a self-contained brief: goal, inputs, files in scope, acceptance criteria, user preferences, expected return format.
-- **Codex:** spawn the custom agents by name (`legion-<name>` files define agents named with underscores, e.g. `backend_engineer`). Ask Codex to run independent subtasks as parallel subagents and wait for all of them before the next wave.
-- Wait for a wave to finish before starting dependent subtasks. Pass outputs forward explicitly.
+- **Claude Code:** launch every subtask of a wave **in the same message** with the Agent/Task tool (`subagent_type` = agent name, shown as `legion:<name>` for plugin agents).
+- **Codex:** spawn the custom agents by name (underscores: `backend_engineer`) as parallel subagents and wait for all of them.
+- Keep briefs short and self-contained: goal, files in scope, acceptance criteria, relevant user preferences, "reply in under ~250 words; put long output in files". Do not paste whole files into briefs — give paths.
+- Wait for a wave before starting dependent work. Pass forward only what the next agent needs.
 
 ## 4. Integrate
-Dispatch `integrator` (or integrate yourself for small jobs): merge outputs, resolve conflicts, run build/tests.
+Small jobs: integrate yourself. Big jobs: dispatch `integrator`. Run the build and tests after merging.
 
-## 5. Verify
-Dispatch `qa-gatekeeper` with the acceptance criteria. For important deliverables also dispatch `chief-reviewer`. Send failures back to the owning agent — at most 2 rework loops, then report honestly what is still failing.
+## 5. Prove it — no proof, not done
+For every acceptance criterion collect evidence you or an agent actually produced: command + result, test output, file:line, screenshot path or source link. In **full** mode dispatch `qa-gatekeeper` to run the checks; for important deliverables also `chief-reviewer`. Send failures back to the owner — at most 2 rework loops, then report honestly what still fails. Never mark something done without evidence.
 
 ## 6. Report
-Give the user one concise summary: what was done, where the results are, what was verified and how, open risks. Do not paste every agent's report.
+Reply to the user with:
+
+**Result** — 2–4 lines: what was delivered and where.
+
+**Evidence**
+| Criterion | Proof | Status |
+|---|---|---|
+| … | `npm test` → 42 passed | ✅ |
+
+**Cost** — run `node ~/.legion/bin/memory.js report` and paste its short summary (main conversation, each agent's tokens, total). In Codex use `report --codex`.
+
+**Open risks** — only if any.
 
 ## 7. Learn
-Collect every **Learned preferences** item from agent reports plus any correction the user made in this session. Save durable ones:
-`node ~/.legion/bin/memory.js add "<short rule>" --category <style|stack|workflow|language|tools>`
+Collect the **Learned preferences** from agent replies and corrections the user made. Save lasting ones with
+`node ~/.legion/bin/memory.js add "<short rule>" --category <style|stack|workflow|language|tools>`.
 Never save secrets, passwords, financial account numbers, health details or other sensitive personal data.
 
-## Example plan
-Request: "Build a landing page with signup and deploy it."
+## Example
+"Build a landing page with signup and deploy it" → **full**:
 
-| id | subtask | agent | depends | wave | acceptance |
-|----|---------|-------|---------|------|-----------|
-| 1 | Copy and structure | copywriter | – | 1 | headline + 3 benefits + CTA |
-| 2 | Signup API | backend-engineer | – | 1 | POST /signup validated, tests pass |
-| 3 | Page UI | ui-engineer | 1 | 2 | responsive 360–1440px, Lighthouse ≥ 90 |
-| 4 | Accessibility pass | accessibility-expert | 3 | 3 | no axe violations |
-| 5 | Deploy pipeline | ci-cd-engineer | 2,3 | 3 | preview URL works |
-| 6 | Verify | qa-gatekeeper | 4,5 | 4 | all criteria evidenced |
+| id | subtask | agent | depends | wave | proof |
+|----|---------|-------|---------|------|-------|
+| 1 | Copy | copywriter | – | 1 | headline + 3 benefits + CTA in `copy.md` |
+| 2 | Signup API | backend-engineer | – | 1 | `npm test` passes, POST /signup validated |
+| 3 | Page UI | ui-engineer | 1 | 2 | Lighthouse ≥ 90 at 360px and 1440px |
+| 4 | Deploy | ci-cd-engineer | 2,3 | 3 | preview URL returns 200 |
+| 5 | Verify | qa-gatekeeper | 4 | 4 | evidence table complete |

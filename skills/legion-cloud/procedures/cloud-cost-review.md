@@ -1,0 +1,20 @@
+# Cloud Cost Review
+
+> Legion procedure `cloud-cost-review` · pack **Cloud & Infrastructure** (`legion-cloud`)
+
+## When to use
+Review cloud bills and find savings: idle resources, rightsizing, commitments, storage tiers and data transfer. Use when costs grow unexpectedly.
+
+## Procedure
+1. Export cost by service, tag and environment.
+2. Find idle, oversized and orphaned resources.
+3. Recommend rightsizing and commitments for steady load.
+4. Move cold data to cheaper tiers.
+5. Set budgets and anomaly alerts.
+
+## Quality checklist
+- [ ] Savings quantified per action
+- [ ] risks noted
+
+## Output
+Savings plan table.

@@ -85,8 +85,9 @@ function checkBuild() {
 
 function counts() {
   const agents = fs.readdirSync(path.join(REPO, 'agents')).filter(f => f.endsWith('.md')).length;
-  const skills = fs.readdirSync(path.join(REPO, 'skills')).filter(f => exists(path.join(REPO, 'skills', f, 'SKILL.md'))).length;
-  return { agents, skills };
+  const skillDirs = fs.readdirSync(path.join(REPO, 'skills')).filter(f => exists(path.join(REPO, 'skills', f, 'SKILL.md')));
+  const procedures = skillDirs.reduce((n, d) => { const p = path.join(REPO, 'skills', d, 'procedures'); return n + (exists(p) ? fs.readdirSync(p).length : 0); }, 0);
+  return { agents, skills: skillDirs.length, procedures };
 }
 
 /* ---------- shared runtime (~/.legion) ---------- */
@@ -119,6 +120,7 @@ function installClaude(m) {
     run('claude', ['plugin', 'marketplace', 'update', MARKETPLACE]);
     r = run('claude', ['plugin', 'install', `${PLUGIN}@${MARKETPLACE}`]);
     const out2 = (r.stdout || '') + (r.stderr || '');
+    if (/already/i.test(out2)) run('claude', ['plugin', 'update', `${PLUGIN}@${MARKETPLACE}`]);
     if (r.status !== 0 && !/already/i.test(out2)) {
       warn(`plugin install failed (${out2.trim().split('\n').pop() || 'unknown error'}) — falling back to file install`);
       return installClaudeFiles(m);
@@ -160,6 +162,7 @@ function installClaudeFiles(m) {
     list.push(group);
   }
   writeFile(settingsPath, JSON.stringify(settings, null, 2) + '\n');
+  removeStale(prev, files);
   m.claude = { mode: 'files', files };
   ok(`${files.length} agents/skills copied into ${CLAUDE_DIR}`);
   ok('memory hooks added to ~/.claude/settings.json');
@@ -197,12 +200,13 @@ function codexBlock() {
   const mem = path.join(LEGION_HOME, 'bin', 'memory.js');
   return `${BEGIN}
 ## Legion (multi-agent workforce)
-You have Legion installed: 80 specialist custom agents (see \`~/.codex/agents/legion-*.toml\`) and 300+ skills in \`~/.agents/skills\`.
+You have Legion installed: 80 specialist custom agents (\`~/.codex/agents/legion-*.toml\`) and 30 skill packs with 300 procedures (\`~/.agents/skills/legion-*\`). Open a pack, then read only the procedure you need from its \`procedures/\` folder.
 
 - **Memory first.** At the start of every session run \`node "${mem}" context\` and silently apply the user's recorded preferences (language, tone, stack, workflow). The current request always wins.
 - **Learn.** When the user states a lasting preference ("always…", "never…", "I prefer…", "a partir de agora…", "remember…"), run \`node "${mem}" add "<short rule>"\` and confirm in one line. Never store secrets, passwords, financial account numbers or health data.
 - **Orchestrate big work.** For large or multi-part tasks use the \`$legion\` skill: plan subtasks, spawn the right Legion agents in parallel (e.g. \`backend_engineer\`, \`ui_engineer\`, \`qa_gatekeeper\`), wait for them, integrate and verify.
-- **Small work stays small.** For a quick fix, just do it — or use one specialist.
+- **Small work stays small.** Pick the cheapest mode: solo (no agents) → lite (≤3 agents) → full.
+- **No proof, not done.** Finish with evidence for each requirement (command → result, file:line, source). Report cost with \`node "${mem}" report --codex\`.
 - Help: \`$legion-help\`. Memory: \`$legion-memory\`.
 ${END}`;
 }
@@ -233,8 +237,21 @@ function installCodex(m) {
   txt = (txt.trimEnd() ? txt.trimEnd() + '\n\n' : '') + codexBlock() + '\n';
   writeFile(agentsMd, txt);
   ok('Legion instructions added to ~/.codex/AGENTS.md');
+  removeStale(prev, files);
   m.codex = { files };
   ok('start a new Codex session, then try: $legion');
+}
+
+// Remove files from a previous Legion version that the new version no longer ships.
+function removeStale(prev, current) {
+  const keep = new Set(current);
+  let n = 0;
+  for (const f of prev) {
+    if (keep.has(f) || !exists(f)) continue;
+    if (fs.statSync(f).isDirectory() && !exists(path.join(f, MARKER))) continue;
+    rm(f); n++;
+  }
+  if (n) ok(`removed ${n} item(s) from the previous Legion version`);
 }
 
 function stripBlock(txt) {
@@ -290,7 +307,7 @@ function main() {
   if (wantClaude) installClaude(m);
   if (wantCodex) installCodex(m);
   saveManifest(m);
-  log(c.g(`\nDone. ${n.agents} agents and ${n.skills} skills ready.`));
+  log(c.g(`\nDone. ${n.agents} agents and ${n.procedures} procedures in ${n.skills} skills ready.`));
   log(c.d('Memory lives only on this computer: ' + path.join(LEGION_HOME, 'memory')));
   log(c.d('Update later with: git pull && node install.js   ·   Remove with: node install.js --uninstall\n'));
 }

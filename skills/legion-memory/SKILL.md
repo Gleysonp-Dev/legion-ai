@@ -24,6 +24,7 @@ All commands: `node ~/.legion/bin/memory.js <command>`
 | `observe "<text>"` | Record a candidate preference (auto-promoted after it repeats) |
 | `learn` | Promote repeated observations into rules |
 | `forget <id or text>` | Remove a rule or observation |
+| `report` | Token cost of the current session: main conversation + each Legion agent (`--codex` for Codex) |
 | `export` / `reset --yes` | Export everything as JSON / wipe memory |
 
 Categories: `language`, `style`, `stack`, `workflow`, `tools`, `general`.

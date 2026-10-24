@@ -48,3 +48,18 @@ test('profile renders categories', () => {
   m.addRule(d, 'Use TypeScript strict mode');
   assert.match(m.renderProfile(d), /## Stack\n- Use TypeScript strict mode/);
 });
+
+test('cost report attributes tokens to agents', () => {
+  const fs = require('fs'); const os = require('os'); const path = require('path');
+  const f = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'legion-r-')), 't.jsonl');
+  const lines = [
+    { type: 'assistant', requestId: 'q1', message: { id: 'm1', usage: { input_tokens: 100, cache_creation_input_tokens: 50, cache_read_input_tokens: 1000, output_tokens: 20 }, content: [{ type: 'tool_use', id: 't1', name: 'Task', input: { subagent_type: 'legion:debugger' } }] } },
+    { type: 'assistant', requestId: 'q1', message: { id: 'm1', usage: { input_tokens: 100, cache_creation_input_tokens: 50, cache_read_input_tokens: 1000, output_tokens: 20 }, content: [] } },
+    { type: 'user', message: { content: [{ type: 'tool_result', tool_use_id: 't1' }] }, toolUseResult: { totalTokens: 5000, totalDurationMs: 3000, totalToolUseCount: 4 } }
+  ];
+  fs.writeFileSync(f, lines.map(l => JSON.stringify(l)).join('\n'));
+  const u = m.claudeUsage(f);
+  assert.strictEqual(u.main.input, 100); // duplicate streaming entry counted once
+  assert.strictEqual(u.agents.debugger.tokens, 5000);
+  assert.match(m.report({}, ['--transcript', f]), /debugger/);
+});
