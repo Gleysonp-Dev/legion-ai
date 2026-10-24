@@ -1,0 +1,13 @@
+{
+  "name": "legion-ai",
+  "version": "1.0.0",
+  "description": "80 specialist AI agents, 300+ skills and a learning memory for Claude Code and Codex.",
+  "license": "MIT",
+  "private": true,
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "build": "node scripts/build.js",
+    "test": "node --test",
+    "install-legion": "node install.js"
+  }
+}

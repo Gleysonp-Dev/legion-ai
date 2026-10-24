@@ -1,0 +1,787 @@
+{
+  "agents": 80,
+  "teams": [
+    {
+      "id": "command",
+      "name": "Command Center",
+      "agents": [
+        "conductor",
+        "task-splitter",
+        "integrator",
+        "chief-reviewer",
+        "memory-curator",
+        "context-scout",
+        "qa-gatekeeper",
+        "risk-assessor"
+      ]
+    },
+    {
+      "id": "backend",
+      "name": "Architecture & Backend",
+      "agents": [
+        "software-architect",
+        "backend-engineer",
+        "api-designer",
+        "database-architect",
+        "microservices-engineer",
+        "integration-engineer",
+        "realtime-engineer",
+        "auth-specialist"
+      ]
+    },
+    {
+      "id": "frontend",
+      "name": "Frontend, Mobile & Devices",
+      "agents": [
+        "frontend-architect",
+        "ui-engineer",
+        "react-specialist",
+        "css-stylist",
+        "mobile-engineer",
+        "accessibility-expert",
+        "web-performance-tuner",
+        "iot-engineer"
+      ]
+    },
+    {
+      "id": "data-ai",
+      "name": "Data & AI",
+      "agents": [
+        "data-engineer",
+        "data-analyst",
+        "ml-engineer",
+        "llm-engineer",
+        "prompt-engineer",
+        "rag-specialist",
+        "data-visualizer",
+        "analytics-engineer"
+      ]
+    },
+    {
+      "id": "infra",
+      "name": "Infrastructure & DevOps",
+      "agents": [
+        "devops-engineer",
+        "cloud-architect",
+        "ci-cd-engineer",
+        "container-specialist",
+        "sre-engineer",
+        "observability-engineer",
+        "cost-optimizer",
+        "release-manager"
+      ]
+    },
+    {
+      "id": "quality",
+      "name": "Quality Engineering",
+      "agents": [
+        "test-architect",
+        "unit-tester",
+        "e2e-tester",
+        "debugger",
+        "code-reviewer",
+        "refactoring-expert",
+        "performance-engineer",
+        "legacy-modernizer"
+      ]
+    },
+    {
+      "id": "security",
+      "name": "Security & Compliance",
+      "agents": [
+        "security-auditor",
+        "appsec-engineer",
+        "threat-modeler",
+        "secrets-guardian",
+        "dependency-auditor",
+        "privacy-engineer",
+        "compliance-analyst",
+        "cloud-security-engineer"
+      ]
+    },
+    {
+      "id": "product",
+      "name": "Product & Design",
+      "agents": [
+        "product-manager",
+        "ux-researcher",
+        "ux-designer",
+        "ui-designer",
+        "requirements-analyst",
+        "design-system-builder",
+        "growth-strategist",
+        "roadmap-planner"
+      ]
+    },
+    {
+      "id": "content",
+      "name": "Content, Docs & Marketing",
+      "agents": [
+        "technical-writer",
+        "documentation-engineer",
+        "copywriter",
+        "seo-specialist",
+        "content-strategist",
+        "translator",
+        "social-media-manager",
+        "presentation-designer"
+      ]
+    },
+    {
+      "id": "business",
+      "name": "Business, Research & Operations",
+      "agents": [
+        "business-analyst",
+        "financial-analyst",
+        "market-researcher",
+        "research-analyst",
+        "project-manager",
+        "operations-automator",
+        "legal-researcher",
+        "customer-success-advisor"
+      ]
+    }
+  ],
+  "skills": 303,
+  "coreSkills": 3,
+  "categories": [
+    {
+      "id": "planning",
+      "name": "Planning & Delivery",
+      "agents": [
+        "conductor",
+        "task-splitter",
+        "project-manager"
+      ],
+      "skills": [
+        "project-kickoff",
+        "work-breakdown",
+        "estimate-effort",
+        "sprint-planning",
+        "definition-of-done",
+        "risk-register",
+        "status-report",
+        "retrospective",
+        "decision-matrix",
+        "okr-builder"
+      ]
+    },
+    {
+      "id": "architecture",
+      "name": "Architecture & System Design",
+      "agents": [
+        "software-architect",
+        "microservices-engineer",
+        "database-architect"
+      ],
+      "skills": [
+        "system-design",
+        "adr-writer",
+        "architecture-review",
+        "c4-diagrams",
+        "monolith-to-services",
+        "event-driven-design",
+        "caching-strategy",
+        "multi-tenancy-design",
+        "scalability-plan",
+        "tech-stack-selection"
+      ]
+    },
+    {
+      "id": "frontend",
+      "name": "Frontend Development",
+      "agents": [
+        "ui-engineer",
+        "react-specialist",
+        "css-stylist",
+        "frontend-architect"
+      ],
+      "skills": [
+        "build-landing-page",
+        "component-builder",
+        "form-builder",
+        "state-management",
+        "responsive-layout",
+        "dark-mode",
+        "nextjs-app",
+        "frontend-testing",
+        "tailwind-setup",
+        "i18n-setup"
+      ]
+    },
+    {
+      "id": "backend",
+      "name": "Backend Development",
+      "agents": [
+        "backend-engineer",
+        "integration-engineer",
+        "auth-specialist"
+      ],
+      "skills": [
+        "crud-service",
+        "background-jobs",
+        "webhook-handler",
+        "file-uploads",
+        "email-notifications",
+        "payments-integration",
+        "search-feature",
+        "rate-limiting",
+        "config-management",
+        "login-flow"
+      ]
+    },
+    {
+      "id": "api",
+      "name": "API Design & Integration",
+      "agents": [
+        "api-designer",
+        "backend-engineer",
+        "integration-engineer"
+      ],
+      "skills": [
+        "rest-api-design",
+        "openapi-spec",
+        "graphql-schema",
+        "api-versioning",
+        "api-client-sdk",
+        "third-party-api-integration",
+        "api-error-handling",
+        "api-testing",
+        "api-docs-portal",
+        "grpc-service"
+      ]
+    },
+    {
+      "id": "database",
+      "name": "Databases & Data Modelling",
+      "agents": [
+        "database-architect",
+        "backend-engineer"
+      ],
+      "skills": [
+        "schema-design",
+        "migration-writer",
+        "query-optimization",
+        "sql-writer",
+        "nosql-modeling",
+        "orm-usage",
+        "backup-restore",
+        "seed-data",
+        "postgres-tuning",
+        "data-integrity-audit"
+      ]
+    },
+    {
+      "id": "testing",
+      "name": "Testing",
+      "agents": [
+        "test-architect",
+        "unit-tester",
+        "e2e-tester",
+        "qa-gatekeeper"
+      ],
+      "skills": [
+        "write-unit-tests",
+        "tdd-cycle",
+        "e2e-playwright",
+        "test-coverage-gaps",
+        "flaky-test-fixer",
+        "mocking-strategy",
+        "load-testing",
+        "regression-suite",
+        "property-based-testing",
+        "manual-test-plan"
+      ]
+    },
+    {
+      "id": "debugging",
+      "name": "Debugging & Troubleshooting",
+      "agents": [
+        "debugger",
+        "observability-engineer"
+      ],
+      "skills": [
+        "root-cause-analysis",
+        "stack-trace-reader",
+        "git-bisect",
+        "memory-leak-hunt",
+        "production-incident",
+        "log-analysis",
+        "network-debugging",
+        "performance-regression",
+        "environment-issues",
+        "crash-report-triage"
+      ]
+    },
+    {
+      "id": "code-quality",
+      "name": "Code Quality & Refactoring",
+      "agents": [
+        "code-reviewer",
+        "refactoring-expert",
+        "legacy-modernizer"
+      ],
+      "skills": [
+        "code-review",
+        "refactor-safely",
+        "dead-code-removal",
+        "naming-cleanup",
+        "lint-format-setup",
+        "type-safety",
+        "complexity-reduction",
+        "duplication-removal",
+        "framework-upgrade",
+        "coding-standards"
+      ]
+    },
+    {
+      "id": "security",
+      "name": "Security (defensive)",
+      "agents": [
+        "security-auditor",
+        "appsec-engineer",
+        "secrets-guardian",
+        "threat-modeler"
+      ],
+      "skills": [
+        "security-review",
+        "owasp-checklist",
+        "secret-scan",
+        "dependency-audit",
+        "input-validation",
+        "security-headers",
+        "threat-model",
+        "access-control-review",
+        "encryption-setup",
+        "security-incident-response"
+      ]
+    },
+    {
+      "id": "devops",
+      "name": "DevOps & CI/CD",
+      "agents": [
+        "devops-engineer",
+        "ci-cd-engineer",
+        "container-specialist",
+        "release-manager"
+      ],
+      "skills": [
+        "github-actions-ci",
+        "dockerize-app",
+        "kubernetes-deploy",
+        "deploy-pipeline",
+        "preview-environments",
+        "infrastructure-as-code",
+        "dev-environment-setup",
+        "release-automation",
+        "pre-commit-hooks",
+        "monorepo-setup"
+      ]
+    },
+    {
+      "id": "cloud",
+      "name": "Cloud & Infrastructure",
+      "agents": [
+        "cloud-architect",
+        "cloud-security-engineer",
+        "cost-optimizer",
+        "devops-engineer"
+      ],
+      "skills": [
+        "aws-architecture",
+        "gcp-architecture",
+        "azure-architecture",
+        "serverless-app",
+        "edge-deploy",
+        "cloud-cost-review",
+        "iam-least-privilege",
+        "dns-domains",
+        "disaster-recovery",
+        "vps-setup"
+      ]
+    },
+    {
+      "id": "performance",
+      "name": "Performance",
+      "agents": [
+        "performance-engineer",
+        "web-performance-tuner"
+      ],
+      "skills": [
+        "profile-app",
+        "core-web-vitals",
+        "bundle-size",
+        "image-optimization",
+        "api-latency",
+        "caching-implementation",
+        "database-performance",
+        "frontend-rendering",
+        "startup-time",
+        "cost-performance-tradeoff"
+      ]
+    },
+    {
+      "id": "reliability",
+      "name": "Reliability & Observability",
+      "agents": [
+        "sre-engineer",
+        "observability-engineer"
+      ],
+      "skills": [
+        "slo-definition",
+        "logging-setup",
+        "metrics-dashboards",
+        "alerting-rules",
+        "distributed-tracing",
+        "runbook-writer",
+        "postmortem",
+        "health-checks",
+        "chaos-testing",
+        "uptime-monitoring"
+      ]
+    },
+    {
+      "id": "data-engineering",
+      "name": "Data Engineering",
+      "agents": [
+        "data-engineer",
+        "analytics-engineer",
+        "database-architect"
+      ],
+      "skills": [
+        "etl-pipeline",
+        "data-quality-checks",
+        "dbt-models",
+        "streaming-pipeline",
+        "warehouse-design",
+        "data-cleaning",
+        "csv-excel-processing",
+        "web-scraping-ethical",
+        "data-catalog",
+        "change-data-capture"
+      ]
+    },
+    {
+      "id": "data-analysis",
+      "name": "Data Analysis & Visualisation",
+      "agents": [
+        "data-analyst",
+        "data-visualizer",
+        "analytics-engineer"
+      ],
+      "skills": [
+        "exploratory-analysis",
+        "ab-test-analysis",
+        "cohort-retention",
+        "funnel-analysis",
+        "kpi-dashboard",
+        "chart-maker",
+        "statistical-testing",
+        "forecasting",
+        "survey-analysis",
+        "spreadsheet-analysis"
+      ]
+    },
+    {
+      "id": "ml",
+      "name": "Machine Learning",
+      "agents": [
+        "ml-engineer",
+        "data-engineer"
+      ],
+      "skills": [
+        "ml-baseline",
+        "feature-engineering",
+        "model-evaluation",
+        "hyperparameter-tuning",
+        "model-deployment",
+        "computer-vision",
+        "nlp-classification",
+        "recommendation-system",
+        "anomaly-detection",
+        "ml-experiment-tracking"
+      ]
+    },
+    {
+      "id": "llm",
+      "name": "LLMs, Agents & Prompting",
+      "agents": [
+        "llm-engineer",
+        "prompt-engineer",
+        "rag-specialist"
+      ],
+      "skills": [
+        "prompt-optimizer",
+        "system-prompt-writer",
+        "agent-builder",
+        "rag-pipeline",
+        "llm-evals",
+        "structured-output",
+        "llm-cost-control",
+        "mcp-server-builder",
+        "claude-skill-writer",
+        "ai-safety-guardrails"
+      ]
+    },
+    {
+      "id": "mobile",
+      "name": "Mobile Development",
+      "agents": [
+        "mobile-engineer",
+        "ui-designer",
+        "release-manager"
+      ],
+      "skills": [
+        "react-native-app",
+        "flutter-app",
+        "ios-swiftui",
+        "android-kotlin",
+        "offline-sync",
+        "push-notifications",
+        "app-store-release",
+        "mobile-performance",
+        "deep-linking",
+        "mobile-analytics"
+      ]
+    },
+    {
+      "id": "git",
+      "name": "Git & Collaboration",
+      "agents": [
+        "release-manager",
+        "code-reviewer",
+        "devops-engineer"
+      ],
+      "skills": [
+        "commit-message",
+        "pull-request-writer",
+        "branching-strategy",
+        "merge-conflict-resolver",
+        "git-history-cleanup",
+        "changelog-writer",
+        "repo-setup",
+        "code-owners",
+        "open-source-launch",
+        "github-issues-triage"
+      ]
+    },
+    {
+      "id": "docs",
+      "name": "Documentation",
+      "agents": [
+        "technical-writer",
+        "documentation-engineer"
+      ],
+      "skills": [
+        "readme-writer",
+        "api-reference-docs",
+        "tutorial-writer",
+        "architecture-docs",
+        "docstrings",
+        "user-guide",
+        "onboarding-guide",
+        "docs-site",
+        "diagram-as-code",
+        "docs-audit"
+      ]
+    },
+    {
+      "id": "ux-design",
+      "name": "UX, UI & Accessibility",
+      "agents": [
+        "ux-designer",
+        "ui-designer",
+        "accessibility-expert",
+        "design-system-builder",
+        "ux-researcher"
+      ],
+      "skills": [
+        "user-flow",
+        "wireframe",
+        "ui-polish",
+        "design-tokens",
+        "accessibility-audit",
+        "usability-heuristics",
+        "microcopy",
+        "persona-builder",
+        "usability-test-plan",
+        "design-critique"
+      ]
+    },
+    {
+      "id": "product",
+      "name": "Product Management",
+      "agents": [
+        "product-manager",
+        "requirements-analyst",
+        "roadmap-planner",
+        "ux-researcher"
+      ],
+      "skills": [
+        "prd-writer",
+        "user-stories",
+        "prioritization",
+        "mvp-scoping",
+        "feature-spec",
+        "competitive-analysis",
+        "product-metrics",
+        "customer-feedback-synthesis",
+        "roadmap-builder",
+        "launch-plan"
+      ]
+    },
+    {
+      "id": "marketing",
+      "name": "Marketing & Growth",
+      "agents": [
+        "growth-strategist",
+        "seo-specialist",
+        "social-media-manager",
+        "content-strategist"
+      ],
+      "skills": [
+        "seo-audit",
+        "keyword-research",
+        "marketing-plan",
+        "email-campaign",
+        "ad-copy",
+        "growth-experiments",
+        "social-content-calendar",
+        "landing-page-copy",
+        "brand-voice",
+        "analytics-tracking-plan"
+      ]
+    },
+    {
+      "id": "writing",
+      "name": "Writing & Communication",
+      "agents": [
+        "copywriter",
+        "content-strategist",
+        "translator",
+        "technical-writer"
+      ],
+      "skills": [
+        "blog-post",
+        "email-writer",
+        "rewrite-clarity",
+        "translate-localize",
+        "summarize-document",
+        "proofread",
+        "press-release",
+        "speech-script",
+        "newsletter",
+        "tone-adapter"
+      ]
+    },
+    {
+      "id": "research",
+      "name": "Research & Analysis",
+      "agents": [
+        "research-analyst",
+        "market-researcher"
+      ],
+      "skills": [
+        "deep-research",
+        "fact-check",
+        "literature-review",
+        "market-sizing",
+        "competitor-teardown",
+        "technology-comparison",
+        "trend-analysis",
+        "interview-synthesis",
+        "swot-analysis",
+        "source-evaluation"
+      ]
+    },
+    {
+      "id": "business-finance",
+      "name": "Business & Finance",
+      "agents": [
+        "business-analyst",
+        "financial-analyst",
+        "project-manager"
+      ],
+      "skills": [
+        "business-plan",
+        "financial-model",
+        "pricing-strategy",
+        "unit-economics",
+        "pitch-deck",
+        "budget-planner",
+        "process-mapping",
+        "invoice-quote",
+        "kpi-definition",
+        "startup-validation"
+      ]
+    },
+    {
+      "id": "productivity",
+      "name": "Productivity & Automation",
+      "agents": [
+        "operations-automator",
+        "presentation-designer",
+        "project-manager"
+      ],
+      "skills": [
+        "automate-task",
+        "file-organizer",
+        "spreadsheet-builder",
+        "presentation-builder",
+        "meeting-notes",
+        "no-code-automation",
+        "personal-planner",
+        "sop-writer",
+        "email-triage",
+        "shell-scripting"
+      ]
+    },
+    {
+      "id": "legal-privacy",
+      "name": "Legal, Privacy & Compliance (not legal advice)",
+      "agents": [
+        "legal-researcher",
+        "privacy-engineer",
+        "compliance-analyst"
+      ],
+      "skills": [
+        "privacy-policy",
+        "terms-of-service",
+        "contract-review",
+        "lgpd-gdpr-compliance",
+        "cookie-consent",
+        "data-retention",
+        "dsar-handler",
+        "soc2-readiness",
+        "license-compliance",
+        "security-questionnaire"
+      ]
+    },
+    {
+      "id": "iot",
+      "name": "IoT & Embedded",
+      "agents": [
+        "iot-engineer",
+        "realtime-engineer",
+        "data-visualizer"
+      ],
+      "skills": [
+        "esp32-firmware",
+        "mqtt-architecture",
+        "sensor-calibration",
+        "iot-dashboard",
+        "device-provisioning",
+        "ota-updates",
+        "home-automation",
+        "hardware-bom",
+        "edge-data-processing",
+        "iot-security"
+      ]
+    }
+  ],
+  "core": [
+    "legion",
+    "legion-help",
+    "legion-memory"
+  ]
+}
