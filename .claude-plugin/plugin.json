@@ -1,6 +1,6 @@
 {
   "name": "legion",
-  "version": "2.1.0",
+  "version": "2.1.2",
   "description": "80 specialist AI agents that split work between them, 300+ ready-made skills and a local memory that learns how you like to work.",
   "author": { "name": "Gleyson" },
   "homepage": "https://github.com/Gleysonp-Dev/legion-ai",

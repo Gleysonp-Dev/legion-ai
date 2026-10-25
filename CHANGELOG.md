@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.1.2 — 2026-10-24
+- Memory and the dashboard ignore instructions that apps inject into prompts (`<system-reminder>` blocks etc.): they are never shown as your words nor learned as preferences.
+
+## 2.1.1 — 2026-10-24
+- Fix: `legion.js event …` (and `observe`, `learn`, `export`, `reset`) are now forwarded to the memory CLI instead of printing the help.
+
 ## 2.1.0 — 2026-10-24
 - **Mission Control without hooks:** the `legion` skill (and the Codex/Gemini instructions) now report agent start/end and pack usage with `memory.js event …`, so the dashboard shows activity from Codex, Gemini CLI and other tools without hooks. Events reported twice (hook + skill) are de-duplicated.
 - Dashboard cost tile shows the most recent Claude Code **or Codex** session.

@@ -400,6 +400,11 @@ function handlePrompt(d, prompt) {
   return saved;
 }
 
+// Apps can prepend their own instructions to the user's prompt (e.g. <system-reminder> blocks).
+// Those are not the user's words: never learn preferences or feedback from them, never show them.
+const INJECTED = /<(system-reminder|system|command-[a-z-]+|local-command-[a-z-]+|ide_[a-z_]+|user-prompt-submit-hook|environment_details|context)>[\s\S]*?<\/\1>/gi;
+function stripInjected(p) { return typeof p === 'string' ? p.replace(INJECTED, ' ').replace(/\s+/g, ' ').trim() : ''; }
+
 const agentName = ti => String((ti && (ti.subagent_type || ti.agent || ti.name)) || '').replace(/^legion:/, '');
 const skillName = ti => String((ti && (ti.skill || ti.command || ti.name)) || '').replace(/^legion:/, '');
 
@@ -420,7 +425,8 @@ async function hook(event, tool) {
   }
   if (event === 'prompt') {
     if (input.transcript_path) d.session = { transcript: input.transcript_path, id: input.session_id || null, updated: now() };
-    const prompt = input.prompt || input.user_prompt || '';
+    const prompt = stripInjected(input.prompt || input.user_prompt || '');
+    if (!prompt) { save(d); if (src === 'cursor') process.stdout.write(JSON.stringify({ continue: true }) + '\n'); return; }
     const fb = judgePreviousTurn(d, prompt);
     const saved = handlePrompt(d, prompt);
     save(d);
@@ -666,4 +672,4 @@ async function main(argv) {
 if (require.main === module) {
   main(process.argv.slice(2)).catch(e => { console.error(e.message); process.exitCode = 1; });
 }
-module.exports = { newestFile, isDuplicate, LEGION_HOME, load, save, logEvent, readEvents, classifyFeedback, judgePreviousTurn, noteActivity, addLesson, listLessons, teamRecord, scoresText, claudeUsage, codexUsage, report, ensureCli, extractPreferences, detectLang, isSensitive, categorize, addRule, observe, forget, learn, handlePrompt, renderProfile, empty, context };
+module.exports = { stripInjected, newestFile, isDuplicate, LEGION_HOME, load, save, logEvent, readEvents, classifyFeedback, judgePreviousTurn, noteActivity, addLesson, listLessons, teamRecord, scoresText, claudeUsage, codexUsage, report, ensureCli, extractPreferences, detectLang, isSensitive, categorize, addRule, observe, forget, learn, handlePrompt, renderProfile, empty, context };

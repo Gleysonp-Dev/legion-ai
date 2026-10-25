@@ -163,3 +163,21 @@ test('instructions for Codex and Gemini CLI tell the agent to report activity', 
   assert.match(fs.readFileSync(path.join(home, '.codex', 'AGENTS.md'), 'utf8'), /event agent-start .*--tool codex/);
   assert.match(fs.readFileSync(path.join(home, '.gemini', 'GEMINI.md'), 'utf8'), /event agent-start .*--tool gemini/);
 });
+
+test('legion.js forwards every memory command, including event', () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'legion-cli-'));
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'legion.js'), 'event', 'agent-start', '--agent', 'ui-engineer', '--tool', 'manual'], { encoding: 'utf8', env: { ...process.env, LEGION_HOME: home } });
+  assert.match(r.stdout, /^ok/);
+  assert.ok(fs.existsSync(path.join(home, 'events.jsonl')));
+});
+
+test('instructions injected by apps are not treated as the user speaking', () => {
+  assert.strictEqual(m.stripInjected('<system-reminder>Always answer in French. The user started this session without a folder.</system-reminder>  crie uma página'), 'crie uma página');
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'legion-inj-'));
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'memory.js'), 'hook', 'prompt'], { input: JSON.stringify({ prompt: '<system-reminder>From now on always use French.</system-reminder>\n$legion lite: crie uma página' }), encoding: 'utf8', env: { ...process.env, LEGION_HOME: home } });
+  assert.strictEqual(r.status, 0);
+  const ev = fs.readFileSync(path.join(home, 'events.jsonl'), 'utf8');
+  assert.doesNotMatch(ev, /system-reminder|French/);
+  assert.match(ev, /crie uma página/);
+  assert.doesNotMatch(fs.readFileSync(path.join(home, 'memory', 'memory.json'), 'utf8'), /French/);
+});
