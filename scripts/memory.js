@@ -241,12 +241,25 @@ function scoresText(d) {
 /* ---------------- events (Mission Control feed) ---------------- */
 
 const EVENTS = path.join(LEGION_HOME, 'events.jsonl');
+// The same agent start/end can be reported twice: by a tool hook and by the Legion skill itself
+// (for tools without hooks). Drop a duplicate seen within a few seconds.
+const DEDUPE = new Set(['agent-start', 'agent-end', 'skill']);
+function isDuplicate(type, data) {
+  if (!DEDUPE.has(type)) return false;
+  const key = data.agent || data.skill;
+  if (!key) return false;
+  const cutoff = Date.now() - 20000;
+  return readEvents(40).some(e => e.type === type && (e.agent || e.skill) === key && Date.parse(e.ts) >= cutoff);
+}
+
 function logEvent(type, data = {}) {
   try {
+    if (isDuplicate(type, data)) return false;
     fs.mkdirSync(LEGION_HOME, { recursive: true });
     try { if (fs.statSync(EVENTS).size > 2 * 1024 * 1024) fs.renameSync(EVENTS, EVENTS + '.1'); } catch { /* no file yet */ }
     fs.appendFileSync(EVENTS, JSON.stringify({ ts: now(), type, ...data }) + '\n');
-  } catch { /* never block */ }
+    return true;
+  } catch { return false; /* never block */ }
 }
 function readEvents(limit = 300) {
   return readJsonl(EVENTS).slice(-limit);
@@ -569,6 +582,7 @@ Usage: node memory.js <command>
   learn                         promote repeated observations
   forget <id|text>              remove a rule or observation
   report [--json] [--codex]     token/cost report for the current session (main thread + each agent)
+  event <type> [--agent n] [--task t] [--skill n] [--tokens n] [--tool t]   report activity to Mission Control
   scores                        team scoreboard: uses, approvals and corrections per agent/pack
   feedback up|down [--target n] score the agents/packs used in the last turn (or one target)
   lesson <name> "<lesson>"      save a lesson an agent or procedure must apply next time
@@ -597,6 +611,22 @@ async function main(argv) {
     case 'forget': { const n = forget(d, positional(args)); save(d); console.log(n ? `Removed ${n} item(s).` : 'Nothing matched.'); break; }
     case 'report': console.log(report(d, args)); break;
     case 'scores': console.log(scoresText(d)); break;
+    case 'event': {
+      // Report activity from tools without hooks (Codex, Gemini CLI, Claude Cowork…) so Mission Control sees it.
+      const type = args[0];
+      const allowed = ['agent-start', 'agent-end', 'skill', 'session', 'turn-end'];
+      if (!allowed.includes(type)) { console.error(`usage: event <${allowed.join('|')}> [--agent n] [--task "..."] [--skill n] [--tokens n] [--tool t]`); process.exitCode = 1; break; }
+      const clean = v => (v == null ? undefined : String(v).replace(/^legion:/, '').slice(0, 120));
+      const data = { tool: clean(arg(args, '--tool')) || 'manual', agent: clean(arg(args, '--agent')), skill: clean(arg(args, '--skill')), task: clean(arg(args, '--task')) };
+      const tok = Number(arg(args, '--tokens')); if (tok > 0) data.tokens = tok;
+      for (const k of Object.keys(data)) if (data[k] === undefined) delete data[k];
+      if (data.task && isSensitive(data.task)) data.task = '(hidden)';
+      const logged = logEvent(type, data);
+      if (logged && type === 'agent-end' && data.agent) { bump(d.usage.agents, data.agent); noteActivity(d, 'agent', data.agent); save(d); }
+      if (logged && type === 'skill' && data.skill) { bump(d.usage.skills, data.skill); noteActivity(d, 'skill', data.skill); save(d); }
+      console.log(logged ? 'ok' : 'ok (already recorded)');
+      break;
+    }
     case 'feedback': {
       const verdict = args[0] === 'up' || args[0] === 'down' ? args[0] : null;
       if (!verdict) { console.error('usage: feedback up|down [--target <name>]'); process.exitCode = 1; break; }
@@ -636,4 +666,4 @@ async function main(argv) {
 if (require.main === module) {
   main(process.argv.slice(2)).catch(e => { console.error(e.message); process.exitCode = 1; });
 }
-module.exports = { LEGION_HOME, load, save, logEvent, readEvents, classifyFeedback, judgePreviousTurn, noteActivity, addLesson, listLessons, teamRecord, scoresText, claudeUsage, codexUsage, report, ensureCli, extractPreferences, detectLang, isSensitive, categorize, addRule, observe, forget, learn, handlePrompt, renderProfile, empty, context };
+module.exports = { newestFile, isDuplicate, LEGION_HOME, load, save, logEvent, readEvents, classifyFeedback, judgePreviousTurn, noteActivity, addLesson, listLessons, teamRecord, scoresText, claudeUsage, codexUsage, report, ensureCli, extractPreferences, detectLang, isSensitive, categorize, addRule, observe, forget, learn, handlePrompt, renderProfile, empty, context };

@@ -42,6 +42,7 @@ Rules: fewest agents that cover the work; one owner per subtask; subtasks in the
 - **Codex:** spawn the custom agents by name (underscores: `backend_engineer`) as parallel subagents and wait for all of them.
 - Keep briefs short and self-contained: goal, files in scope, acceptance criteria, relevant user preferences, "reply in under ~250 words; put long output in files". Do not paste whole files into briefs — give paths.
 - Tell each agent: "If `~/.legion/lessons/<your-name>.md` exists, read it first."
+- **Report activity to Mission Control.** Right before an agent starts run `node ~/.legion/bin/memory.js event agent-start --agent <name> --task "<5-word summary>" --tool <claude|codex|gemini|cursor|cowork>`, and right after it returns run `node ~/.legion/bin/memory.js event agent-end --agent <name>` (add `--tokens <n>` if your tool tells you). One short shell call each; duplicates from tool hooks are ignored automatically. If the command is not available (e.g. a sandbox without your home folder), skip it silently.
 - Wait for a wave before starting dependent work. Pass forward only what the next agent needs.
 
 ## 4. Integrate

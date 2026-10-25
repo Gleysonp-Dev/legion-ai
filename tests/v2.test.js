@@ -140,3 +140,26 @@ test('hooks stay silent inside a council reviewer session', () => {
   assert.strictEqual(r.stdout, '');
   assert.ok(!m.load().rules.some(x => /Rust/.test(x.text)));
 });
+
+test('tools without hooks can report activity, and duplicates from hooks are dropped', () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'legion-ev-'));
+  const run = (...a) => spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'memory.js'), ...a], { encoding: 'utf8', env: { ...process.env, LEGION_HOME: home } });
+  assert.match(run('event', 'agent-start', '--agent', 'legion:backend-engineer', '--task', 'build API', '--tool', 'codex').stdout, /^ok/);
+  assert.match(run('event', 'agent-start', '--agent', 'backend-engineer', '--tool', 'claude').stdout, /already recorded/);
+  assert.match(run('event', 'agent-end', '--agent', 'backend-engineer', '--tokens', '1200', '--tool', 'codex').stdout, /^ok$/m);
+  const hook = spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'memory.js'), 'hook', 'post-tool'], { input: JSON.stringify({ tool_name: 'Task', tool_input: { subagent_type: 'backend-engineer' } }), encoding: 'utf8', env: { ...process.env, LEGION_HOME: home } });
+  assert.strictEqual(hook.status, 0);
+  const events = fs.readFileSync(path.join(home, 'events.jsonl'), 'utf8').trim().split('\n').map(JSON.parse);
+  assert.strictEqual(events.filter(e => e.type === 'agent-start').length, 1);
+  assert.strictEqual(events.filter(e => e.type === 'agent-end').length, 1);
+  assert.strictEqual(events.find(e => e.type === 'agent-end').tokens, 1200);
+  assert.strictEqual(run('event', 'bogus').status, 1);
+});
+
+test('instructions for Codex and Gemini CLI tell the agent to report activity', () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'legion-h2-'));
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'install.js'), '--home', home, '--codex', '--gemini'], { encoding: 'utf8', env: { ...process.env, PATH: '' } });
+  assert.strictEqual(r.status, 0, r.stdout + r.stderr);
+  assert.match(fs.readFileSync(path.join(home, '.codex', 'AGENTS.md'), 'utf8'), /event agent-start .*--tool codex/);
+  assert.match(fs.readFileSync(path.join(home, '.gemini', 'GEMINI.md'), 'utf8'), /event agent-start .*--tool gemini/);
+});

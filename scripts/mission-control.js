@@ -37,10 +37,18 @@ function councilReports(limit = 8) {
   }).filter(Boolean);
 }
 
+// Most recent session of either tool: Claude Code transcript (via hooks) or Codex session log.
 function cost(d) {
+  const cands = [];
   try {
-    if (d.session && d.session.transcript && fs.existsSync(d.session.transcript)) return mem.claudeUsage(d.session.transcript);
+    if (d.session && d.session.transcript && fs.existsSync(d.session.transcript)) cands.push({ t: fs.statSync(d.session.transcript).mtimeMs, get: () => mem.claudeUsage(d.session.transcript) });
   } catch { /* ignore */ }
+  try {
+    const f = mem.newestFile(path.join(process.env.CODEX_HOME || path.join(os.homedir(), '.codex'), 'sessions'), /\.jsonl$/);
+    if (f) cands.push({ t: fs.statSync(f).mtimeMs, get: () => mem.codexUsage(f) });
+  } catch { /* ignore */ }
+  cands.sort((a, b) => b.t - a.t);
+  for (const c of cands) { try { const u = c.get(); if (u) return u; } catch { /* next */ } }
   return null;
 }
 
@@ -106,7 +114,7 @@ code{background:var(--panel2);padding:1px 6px;border-radius:6px}
  <div class="card kpi"><div class="v" id="k-running">0</div><div class="l">agents working now</div></div>
  <div class="card kpi"><div class="v" id="k-runs">0</div><div class="l">agent runs (recent)</div></div>
  <div class="card kpi"><div class="v" id="k-approval">—</div><div class="l">approval rate (👍 / 👍+👎)</div></div>
- <div class="card kpi"><div class="v" id="k-tokens">—</div><div class="l">tokens this Claude Code session</div></div>
+ <div class="card kpi"><div class="v" id="k-tokens">—</div><div class="l" id="k-tokens-l">tokens this session</div></div>
 </section>
 <section class="card c8"><h2>Live activity</h2><div class="running" id="running"></div><ul class="feed" id="feed"></ul></section>
 <section class="card c4"><h2>Cost this session</h2><div id="cost"></div></section>
@@ -156,11 +164,11 @@ function renderState(){
   $('sub').textContent=(S.version?'v'+S.version+' · ':'')+S.home;
   const sc=S.scores||[]; const up=sc.reduce((a,r)=>a+r.up,0), dn=sc.reduce((a,r)=>a+r.down,0);
   $('k-approval').textContent=up+dn?Math.round(up*100/(up+dn))+'%':'—';
-  if(S.cost){const m=S.cost.main;const ag=Object.values(S.cost.agents||{}).reduce((a,x)=>a+x.tokens,0);$('k-tokens').textContent=fmt(m.input+m.cacheWrite+m.output+ag);
+  if(S.cost){const m=S.cost.main;const ag=Object.values(S.cost.agents||{}).reduce((a,x)=>a+x.tokens,0);$('k-tokens').textContent=fmt(m.input+m.cacheWrite+m.output+ag);$('k-tokens-l').textContent='tokens this '+S.cost.tool+' session';
     const rows=[['main conversation',m.input+m.cacheWrite+m.output]].concat(Object.entries(S.cost.agents||{}).map(([k,v])=>[k,v.tokens])).sort((a,b)=>b[1]-a[1]);
     const max=Math.max(1,...rows.map(r=>r[1]));
     $('cost').innerHTML='<table>'+rows.map(r=>'<tr><td>'+esc(r[0])+'</td><td style="width:45%"><div class="bar"><i style="width:'+(r[1]*100/max).toFixed(1)+'%"></i></div></td><td>'+fmt(r[1])+'</td></tr>').join('')+'</table><p class="empty" style="margin:8px 0 0">+ '+fmt(m.cacheRead)+' tokens re-read from cache (cheap)</p>';
-  } else $('cost').innerHTML='<p class="empty">Appears after your first Claude Code message with Legion installed. Codex: <code>memory.js report --codex</code>.</p>';
+  } else $('cost').innerHTML='<p class="empty">Appears after your first Claude Code or Codex session with Legion installed.</p>';
   $('scores').innerHTML=sc.length?'<table><tr><th>agent / pack</th><th>uses</th><th>👍</th><th>👎</th><th>reliability</th></tr>'+sc.slice(0,15).map(r=>{const n=r.up+r.down,p=n?r.up/n:null;return '<tr><td>'+esc(r.name)+'</td><td>'+r.uses+'</td><td>'+r.up+'</td><td>'+r.down+'</td><td>'+(p==null?'<span class="empty">no feedback</span>':'<div style="display:flex;gap:8px;align-items:center"><div class="bar score" style="flex:1"><i style="width:'+Math.max(3,p*100).toFixed(0)+'%;background:'+(p>=.75?'var(--ok)':p<.5?'var(--bad)':'var(--warn)')+'"></i></div><span>'+Math.round(p*100)+'%</span></div>')+'</td></tr>'}).join('')+'</table>':'<p class="empty">No feedback yet. Say “perfeito” or “não era isso” after Legion works and the scoreboard fills in.</p>';
   const C={approve:'<span class="ok">approve</span>',changes:'<span class="warn">changes</span>',reject:'<span class="bad">reject</span>'};
   $('council').innerHTML=(S.council||[]).length?'<table><tr><th>when</th><th>mode</th><th>reviewers</th><th>verdict</th><th>findings</th></tr>'+S.council.map(c=>'<tr><td>'+esc(c.at)+'</td><td>'+esc(c.mode)+'</td><td>'+esc(c.reviewers.join(', '))+'</td><td>'+(C[c.consensus]||'—')+'</td><td>'+c.findings+'</td></tr>').join('')+'</table>':'<p class="empty">No council runs yet. Try <code>node ~/.legion/bin/council.js review</code> in a project.</p>';

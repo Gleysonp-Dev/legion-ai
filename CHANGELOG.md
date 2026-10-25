@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.1.0 — 2026-10-24
+- **Mission Control without hooks:** the `legion` skill (and the Codex/Gemini instructions) now report agent start/end and pack usage with `memory.js event …`, so the dashboard shows activity from Codex, Gemini CLI and other tools without hooks. Events reported twice (hook + skill) are de-duplicated.
+- Dashboard cost tile shows the most recent Claude Code **or Codex** session.
+
 ## 2.0.1 — 2026-10-24
 - Fix CI: the build test now generates into a temp folder (it raced with the installer test) and also checks the committed generated files are up to date.
 - Windows: correct dashboard/council commands for PowerShell (`$HOME\.legion\bin\legion.js`), `npm run dashboard|council|report|scores`, and safe argument quoting for council reviewers.

@@ -182,6 +182,7 @@ You have Legion installed: 80 specialist agents in ${agents} and 30 skill packs 
 - **Learn.** When the user states a lasting preference ("always…", "never…", "a partir de agora…", "remember…"), run \`${mem} add "<short rule>"\`. When the user approves or corrects the work, run \`${mem} feedback up|down --target <agent-or-pack>\`; after a correction save a lesson with \`${mem} lesson <agent-or-procedure> "<what to do differently>"\`. Never store secrets, passwords, financial account numbers or health data.
 - **Orchestrate big work** with ${skill}: plan, run the right Legion agents in parallel, integrate and verify. Whole projects: the \`legion-playbooks\` skill.
 - **Small work stays small.** Cheapest mode first: solo → lite (≤3 agents) → full.
+- **Mission Control.** This tool has no activity hooks, so report it yourself: before each Legion agent runs \`${mem} event agent-start --agent <name> --task "<short>" --tool ${tool}\`, after it returns \`${mem} event agent-end --agent <name>\`, and when you use a Legion pack \`${mem} event skill --skill <pack> --tool ${tool}\`.
 - **No proof, not done.** Finish with evidence for each requirement. For important changes ask the council of other AIs: \`${council} review --host ${tool}\`.
 - **Cost:** \`${mem} report${tool === 'codex' ? ' --codex' : ''}\`. Live dashboard: \`node "${path.join(bin, 'legion.js')}" dashboard\`.
 ${END}`;
