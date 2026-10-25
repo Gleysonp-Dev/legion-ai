@@ -6,7 +6,24 @@ const path = require('path');
 const { build } = require('../scripts/build.js');
 
 const ROOT = path.resolve(__dirname, '..');
-const stats = build({ quiet: true });
+// Build into a temp folder: other test files read the repo's generated files at the same time.
+const os = require('os');
+const OUT = fs.mkdtempSync(path.join(os.tmpdir(), 'legion-build-'));
+const stats = build({ quiet: true, out: OUT });
+
+function listTree(dir) {
+  const out = [];
+  const walk = d => { for (const e of fs.readdirSync(d, { withFileTypes: true })) { const p = path.join(d, e.name); if (e.isDirectory()) walk(p); else out.push(path.relative(dir, p)); } };
+  walk(dir); return out.sort();
+}
+
+test('committed generated files match the sources (run npm run build)', () => {
+  for (const d of ['agents', 'skills', 'codex', 'gemini', 'cursor']) {
+    const a = listTree(path.join(OUT, d)), b = listTree(path.join(ROOT, d));
+    assert.deepStrictEqual(b, a, `${d}: file list differs`);
+    for (const f of a) assert.strictEqual(fs.readFileSync(path.join(ROOT, d, f), 'utf8'), fs.readFileSync(path.join(OUT, d, f), 'utf8'), `${d}/${f} is stale`);
+  }
+});
 
 function frontmatter(file) {
   const t = fs.readFileSync(file, 'utf8');

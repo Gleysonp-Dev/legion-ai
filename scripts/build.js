@@ -251,7 +251,12 @@ ${cat.agents.map(a => `\`${a}\``).join(', ')}. For large or multi-part work, use
 
 /* ---------- build ---------- */
 
-function build({ quiet = false } = {}) {
+function build({ quiet = false, out = ROOT } = {}) {
+  const OUT_AGENTS = path.join(out, 'agents');
+  const OUT_CODEX = path.join(out, 'codex', 'agents');
+  const OUT_GEMINI = path.join(out, 'gemini', 'agents');
+  const OUT_CURSOR = path.join(out, 'cursor', 'agents');
+  const OUT_SKILLS = path.join(out, 'skills');
   const { agents, teams } = parseAgents();
   const { skills, cats } = parseSkills(path.join(SRC, 'skills'));
   const errors = [];
@@ -321,7 +326,7 @@ function build({ quiet = false } = {}) {
 
   // catalog for docs
   const stats = { agents: agents.length, teams: teams.length, procedures: skills.length, packs: cats.length, coreSkills: coreNames.length, registeredSkills: cats.length + coreNames.length, categories: cats.length };
-  fs.writeFileSync(path.join(ROOT, 'catalog.json'), JSON.stringify({
+  fs.writeFileSync(path.join(out, 'catalog.json'), JSON.stringify({
     ...stats,
     teams: teams.map(t => ({ id: t.id, name: t.name, agents: t.agents })),
     categories: cats.map(c => ({ id: c.id, name: c.name, agents: c.agents, skills: c.skills })),
@@ -345,8 +350,8 @@ function build({ quiet = false } = {}) {
     for (const n of c.skills) cat.push(`| \`${n}\` | ${skills.find(x => x.name === n).desc.replace(/\|/g, '/')} |`);
     cat.push('');
   }
-  mkdirp(path.join(ROOT, 'docs'));
-  fs.writeFileSync(path.join(ROOT, 'docs', 'CATALOG.md'), cat.join('\n'));
+  mkdirp(path.join(out, 'docs'));
+  fs.writeFileSync(path.join(out, 'docs', 'CATALOG.md'), cat.join('\n'));
 
   if (!quiet) console.log(`Built ${stats.agents} agents (${stats.teams} teams), ${stats.procedures} procedures in ${stats.packs} packs + ${stats.coreSkills} core skills (${stats.registeredSkills} registered skills).`);
   return stats;

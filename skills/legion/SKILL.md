@@ -9,6 +9,8 @@ You (the main session) are the **conductor**. Subagents cannot spawn other subag
 
 Legion's promise to the user: **the team proves what it did and shows what it cost.**
 
+> **Paths:** `~` means your home folder. In Windows PowerShell (Codex, Cursor) write `$HOME\.legion\bin\<file>.js` instead of `~/.legion/bin/<file>.js`; Claude Code's shell understands `~` everywhere.
+
 ## 0. Load memory
 Run `node ~/.legion/bin/memory.js context` and apply the preferences it prints (language, tone, stack, formats). Pass the relevant ones to each agent. If the command is missing, continue without memory.
 

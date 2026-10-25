@@ -21,7 +21,9 @@ const opt = (f, d) => { const i = args.indexOf(f); return i >= 0 && args[i + 1] 
 const PORT = Number(opt('--port', process.env.LEGION_PORT || 4777));
 const EVENTS = path.join(mem.LEGION_HOME, 'events.jsonl');
 let VERSION = '';
-try { VERSION = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8')).version; } catch { /* installed copy */ }
+for (const f of [path.join(__dirname, '..', 'package.json'), path.join(mem.LEGION_HOME, 'version.json')]) {
+  try { VERSION = JSON.parse(fs.readFileSync(f, 'utf8')).version; if (VERSION) break; } catch { /* try next */ }
+}
 
 function councilReports(limit = 8) {
   const dir = path.join(mem.LEGION_HOME, 'council');
@@ -83,6 +85,7 @@ main{display:grid;gap:16px;padding:16px 20px;grid-template-columns:repeat(12,1fr
 .feed{list-style:none;margin:0;padding:0;max-height:360px;overflow:auto}
 .feed li{display:grid;grid-template-columns:64px 22px 1fr;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);font-size:13px}
 .feed time{color:var(--muted);font-variant-numeric:tabular-nums}
+.feed li.empty{display:block}
 table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:6px 4px;border-bottom:1px solid var(--line)}th{color:var(--muted);font-weight:500}
 .bar{height:8px;background:var(--panel2);border-radius:4px;overflow:hidden;min-width:60px}.bar i{display:block;height:100%;background:var(--blue)}
 .bar.score i{background:var(--ok)}
@@ -150,7 +153,7 @@ function renderFeed(){
 }
 function renderState(){
   if(!S)return;
-  $('sub').textContent='v'+(S.version||'')+' · '+S.home;
+  $('sub').textContent=(S.version?'v'+S.version+' · ':'')+S.home;
   const sc=S.scores||[]; const up=sc.reduce((a,r)=>a+r.up,0), dn=sc.reduce((a,r)=>a+r.down,0);
   $('k-approval').textContent=up+dn?Math.round(up*100/(up+dn))+'%':'—';
   if(S.cost){const m=S.cost.main;const ag=Object.values(S.cost.agents||{}).reduce((a,x)=>a+x.tokens,0);$('k-tokens').textContent=fmt(m.input+m.cacheWrite+m.output+ag);

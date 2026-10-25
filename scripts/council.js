@@ -78,7 +78,9 @@ function runReviewer(key, prompt, { cwd, timeout }) {
   return new Promise(resolve => {
     const started = Date.now();
     let stdout = '', stderr = '', done = false;
-    const child = spawn(r.bin, r.args(outFile), { cwd, shell: IS_WIN, env: { ...process.env, LEGION_COUNCIL: '1' } });
+    // On Windows the AI CLIs are .cmd shims, which need a shell — so quote every argument ourselves.
+    const argv = IS_WIN ? r.args(outFile).map(x => (/[\s"&|<>^()]/.test(x) ? `"${x.replace(/"/g, '""')}"` : x)) : r.args(outFile);
+    const child = spawn(r.bin, argv, { cwd, shell: IS_WIN, env: { ...process.env, LEGION_COUNCIL: '1' } });
     const finish = (status, error) => {
       if (done) return; done = true;
       clearTimeout(timer);

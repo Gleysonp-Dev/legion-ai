@@ -7,6 +7,8 @@ description: "Cross-AI review: have other AIs (Codex, Claude, Gemini — whichev
 
 One AI did the work; independent AIs from other vendors review it. They catch different mistakes than you do. The reviewers only read — they never change files.
 
+> **Paths:** `~` means your home folder. In Windows PowerShell (Codex, Cursor) write `$HOME\.legion\bin\<file>.js` instead of `~/.legion/bin/<file>.js`; Claude Code's shell understands `~` everywhere.
+
 ## When to call the council
 - Before finishing **full**-mode work, security or payment changes, data migrations, public APIs.
 - Before building from a big plan (`plan` mode) — cheapest moment to catch a wrong direction.

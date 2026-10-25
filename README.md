@@ -134,7 +134,9 @@ flowchart LR
 ## 📡 Mission Control
 
 ```bash
-node ~/.legion/bin/legion.js dashboard
+node ~/.legion/bin/legion.js dashboard              # macOS / Linux / Git Bash
+node $HOME\.legion\bin\legion.js dashboard        # Windows PowerShell
+npm run dashboard                                   # from the legion-ai folder, any OS
 ```
 
 <p align="center"><img src="assets/mission-control.png" alt="Legion Mission Control dashboard" width="900"></p>
@@ -192,6 +194,8 @@ Planning · Architecture · Frontend · Backend · APIs · Databases · Testing 
 Each pack is one skill (`legion-testing`, `legion-iot`…) with 10 procedures read on demand — only the short index stays in context. See the [full catalogue](docs/CATALOG.md).
 
 ## Memory, privacy and commands
+
+> On Windows PowerShell, `~` is not expanded for `node`: use `$HOME\.legion\bin\legion.js` (or `npm run dashboard`, `npm run report`, `npm run scores` inside the legion-ai folder).
 
 Everything lives in `~/.legion/` on your computer: `memory/` (preferences), `lessons/`, `council/` reports and `events.jsonl` (dashboard feed). Passwords, keys, tokens, card/account numbers, ID numbers and health data are never stored.
 

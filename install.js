@@ -154,9 +154,10 @@ function installRuntime(m) {
   step(`Legion runtime → ${LEGION_HOME}`);
   for (const f of CLI_FILES) writeFile(path.join(LEGION_HOME, 'bin', f), fs.readFileSync(path.join(REPO, 'scripts', f)));
   writeFile(path.join(LEGION_HOME, 'repo-path.txt'), REPO + '\n');
+  writeFile(path.join(LEGION_HOME, 'version.json'), JSON.stringify({ version: readJSON(path.join(REPO, 'package.json'), {}).version || null }) + '\n');
   if (!DRY) fs.mkdirSync(path.join(LEGION_HOME, 'memory'), { recursive: true });
   m.runtime = { home: LEGION_HOME, installedAt: new Date().toISOString() };
-  ok('memory, council and Mission Control installed — dashboard: node ~/.legion/bin/legion.js dashboard');
+  ok(`memory, council and Mission Control installed — dashboard: ${IS_WIN ? 'node $HOME\\.legion\\bin\\legion.js' : 'node ~/.legion/bin/legion.js'} dashboard`);
 }
 
 function installSharedSkills(m) {
@@ -406,7 +407,8 @@ function main() {
   saveManifest(m);
   log(c.g(`\nDone. ${n.agents} agents and ${n.procedures} procedures in ${n.skills} skills ready for ${targets.map(t => LABEL[t]).join(', ')}.`));
   log(c.d('Memory and lessons live only on this computer: ' + LEGION_HOME));
-  log(c.d('Live dashboard: node ~/.legion/bin/legion.js dashboard   ·   Cross-AI review: node ~/.legion/bin/council.js review'));
+  const lj = IS_WIN ? 'node $HOME\\.legion\\bin\\legion.js' : 'node ~/.legion/bin/legion.js';
+  log(c.d(`Live dashboard: ${lj} dashboard   ·   Cross-AI review: ${lj} council review   (or, inside this folder: npm run dashboard)`));
   log(c.d('Update: git pull && node install.js   ·   Remove: node install.js --uninstall\n'));
 }
 

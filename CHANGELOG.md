@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.1 — 2026-10-24
+- Fix CI: the build test now generates into a temp folder (it raced with the installer test) and also checks the committed generated files are up to date.
+- Windows: correct dashboard/council commands for PowerShell (`$HOME\.legion\bin\legion.js`), `npm run dashboard|council|report|scores`, and safe argument quoting for council reviewers.
+- Mission Control shows the installed version and lays out the empty activity feed correctly.
+
 ## 2.0.0 — 2026-10-24
 - **AI Council** (`council.js`, `legion-council` skill): Codex, Claude and Gemini review each other's diffs, plans or questions in read-only mode; findings are merged, ranked and saved; the author fixes or rejects each one.
 - **Learning from outcomes**: approvals and corrections right after Legion works score the agents/packs used; corrections become **lessons** (`~/.legion/lessons/<name>.md`) that agents and procedures read on every run; the conductor sees a team record.

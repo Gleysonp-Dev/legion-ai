@@ -3,14 +3,14 @@
   "owner": { "name": "Gleyson" },
   "metadata": {
     "description": "Legion — an 80-agent AI workforce with 300+ skills and learning memory for Claude Code and Codex.",
-    "version": "2.0.0"
+    "version": "2.0.1"
   },
   "plugins": [
     {
       "name": "legion",
       "source": "./",
       "description": "80 specialist agents, 300+ skills and a learning memory. Start with /legion.",
-      "version": "2.0.0",
+      "version": "2.0.1",
       "category": "productivity"
     }
   ]

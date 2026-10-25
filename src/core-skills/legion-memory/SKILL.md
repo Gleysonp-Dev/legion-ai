@@ -13,6 +13,8 @@ Files:
 
 In Claude Code this runs automatically through hooks (session start, every prompt, every agent/skill call). In Codex, follow the Legion block in `~/.codex/AGENTS.md`: run `context` at the start and `add` when the user states a lasting preference.
 
+> **Paths:** `~` means your home folder. In Windows PowerShell (Codex, Cursor) write `$HOME\.legion\bin\<file>.js` instead of `~/.legion/bin/<file>.js`; Claude Code's shell understands `~` everywhere.
+
 ## Commands
 All commands: `node ~/.legion/bin/memory.js <command>`
 
