@@ -27,7 +27,7 @@ test('has 300 procedures in 30 packs and few registered skills', () => {
   assert.ok(stats.procedures >= 300, `only ${stats.procedures}`);
   assert.strictEqual(stats.packs, 30);
   assert.ok(stats.registeredSkills <= 40, 'too many registered skills inflate context cost');
-  for (const d of fs.readdirSync(path.join(ROOT, 'skills')).filter(d => d.startsWith('legion-') && !['legion-help', 'legion-memory'].includes(d))) {
+  for (const d of fs.readdirSync(path.join(ROOT, 'skills')).filter(d => fs.existsSync(path.join(ROOT, 'skills', d, 'procedures')))) {
     const procs = fs.readdirSync(path.join(ROOT, 'skills', d, 'procedures'));
     assert.ok(procs.length >= 10, d);
     const body = fs.readFileSync(path.join(ROOT, 'skills', d, 'SKILL.md'), 'utf8');

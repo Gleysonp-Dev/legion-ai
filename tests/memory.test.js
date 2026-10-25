@@ -1,4 +1,5 @@
 'use strict';
+process.env.LEGION_HOME = require('fs').mkdtempSync(require('path').join(require('os').tmpdir(), 'legion-m-'));
 const test = require('node:test');
 const assert = require('node:assert');
 const m = require('../scripts/memory.js');

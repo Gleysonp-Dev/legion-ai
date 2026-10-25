@@ -2,6 +2,8 @@
 /**
  * Legion memory — a small, local memory that learns how the user likes to work.
  *
+ * Also: event feed for Mission Control, team scoreboard and lessons learned from feedback.
+ *
  * Storage (all local, human-readable):
  *   ~/.legion/memory/memory.json   rules, observations, usage stats, language stats
  *   ~/.legion/memory/profile.md    generated view of the active rules (injected into sessions)
@@ -199,7 +201,15 @@ function renderProfile(d) {
 
 function context(d) {
   const body = renderProfile(d).split('\n').slice(3).join('\n').trim();
-  return `<legion-memory>\nWhat Legion has learned about how this user likes to work. Apply it silently; the current request wins on conflict. To save a new lasting preference run: node ~/.legion/bin/memory.js add "<rule>"\n\n${body}\n</legion-memory>`;
+  const extra = [];
+  const rec = teamRecord(d);
+  if (rec.trusted.length) extra.push(`- Proven with this user: ${rec.trusted.map(r => `${r.name} (${r.up}/${r.up + r.down})`).join(', ')}`);
+  if (rec.care.length) extra.push(`- Needed rework before — brief carefully and verify: ${rec.care.map(r => `${r.name} (${r.up}/${r.up + r.down})`).join(', ')}`);
+  let lessons = []; try { lessons = listLessons(); } catch { /* none */ }
+  if (lessons.length) extra.push(`- Lessons on file (read ~/.legion/lessons/<name>.md before using them): ${lessons.map(l => l.target).join(', ')}`);
+  for (const p of (d.pendingLessons || []).slice(-3)) extra.push(`- Unrecorded correction (${p.targets.join(', ')}): "${p.text}" — turn it into a lesson with: node ~/.legion/bin/memory.js lesson <name> "<lesson>", then: node ~/.legion/bin/memory.js lessons --clear-pending`);
+  const team = extra.length ? `\n\n## Team record\n${extra.join('\n')}` : '';
+  return `<legion-memory>\nWhat Legion has learned about how this user likes to work. Apply it silently; the current request wins on conflict. To save a new lasting preference run: node ~/.legion/bin/memory.js add "<rule>"\n\n${body}${team}\n</legion-memory>`;
 }
 
 function show(d) {
@@ -216,19 +226,134 @@ function show(d) {
   const ta = top(d.usage.agents, 10), ts = top(d.usage.skills, 10);
   out.push(`Top agents: ${ta.map(([k, v]) => `${k}=${v}`).join(', ') || '-'}`);
   out.push(`Top skills: ${ts.map(([k, v]) => `${k}=${v}`).join(', ') || '-'}`);
+  out.push('', scoresText(d));
   return out.join('\n');
+}
+
+function scoresText(d) {
+  const rows = teamRecord(d).all;
+  if (!rows.length) return 'Team scoreboard: no feedback yet.';
+  const out = ['Team scoreboard (👍 approved / 👎 corrected after the agent or pack worked):'];
+  for (const r of rows.slice(0, 25)) out.push(`  ${r.name.padEnd(28)} uses ${String(r.uses).padStart(3)}  👍 ${String(r.up).padStart(2)}  👎 ${String(r.down).padStart(2)}${r.rate == null ? '' : `  ${Math.round(r.rate * 100)}%`}`);
+  return out.join('\n');
+}
+
+/* ---------------- events (Mission Control feed) ---------------- */
+
+const EVENTS = path.join(LEGION_HOME, 'events.jsonl');
+function logEvent(type, data = {}) {
+  try {
+    fs.mkdirSync(LEGION_HOME, { recursive: true });
+    try { if (fs.statSync(EVENTS).size > 2 * 1024 * 1024) fs.renameSync(EVENTS, EVENTS + '.1'); } catch { /* no file yet */ }
+    fs.appendFileSync(EVENTS, JSON.stringify({ ts: now(), type, ...data }) + '\n');
+  } catch { /* never block */ }
+}
+function readEvents(limit = 300) {
+  return readJsonl(EVENTS).slice(-limit);
+}
+
+/* ---------------- learning from outcomes ---------------- */
+
+const LESSONS = path.join(LEGION_HOME, 'lessons');
+// Feedback the user gives right after Legion worked. Positive only counts on short messages.
+const POSITIVE = /\b(perfeito|perfect|excelente|excellent|[oó]timo|great job|well done|funcionou|it works|works now|ficou (bom|[oó]timo|show|perfeito)|show de bola|lgtm|aprovado|approved|exatamente isso|exactly what i)\b/i;
+const NEGATIVE = /(n[aã]o era isso|t[aá] errado|est[aá] errado|\berrado\b|\bwrong\b|that'?s not what|not what i (asked|wanted|meant)|n[aã]o funcionou|n[aã]o funciona|doesn'?t work|does not work|didn'?t work|\bbroken\b|quebrou|refa[cç]a|\bredo\b|you missed|voc[eê] esqueceu|faltou|ignorou|you ignored)/i;
+
+function classifyFeedback(prompt) {
+  if (!prompt || typeof prompt !== 'string') return null;
+  const t = prompt.replace(/```[\s\S]*?```/g, ' ').trim();
+  if (NEGATIVE.test(t)) return 'down';
+  if (t.length <= 160 && POSITIVE.test(t)) return 'up';
+  return null;
+}
+
+function score(d, name, kind) {
+  if (!name) return;
+  d.scores = d.scores || {};
+  const s = d.scores[name] || (d.scores[name] = { up: 0, down: 0, uses: 0 });
+  if (kind === 'use') s.uses++; else if (kind === 'up') s.up++; else if (kind === 'down') s.down++;
+}
+
+function noteActivity(d, kind, name) {
+  if (!name) return;
+  d.recent = d.recent || [];
+  if (!d.recent.find(r => r.name === name)) d.recent.push({ kind, name, ts: now() });
+  d.recent = d.recent.slice(-12);
+  score(d, name, 'use');
+}
+
+// Called on each new prompt: judge the previous turn's work, then start a fresh turn.
+function judgePreviousTurn(d, prompt) {
+  const verdict = classifyFeedback(prompt);
+  const targets = (d.recent || []).map(r => r.name);
+  if (verdict && targets.length) {
+    for (const t of targets) score(d, t, verdict);
+    if (verdict === 'down') {
+      const sentence = splitSentences(prompt).find(x => NEGATIVE.test(x)) || prompt;
+      const text = sentence.replace(/\s+/g, ' ').trim().slice(0, 240);
+      if (!isSensitive(text)) {
+        d.pendingLessons = (d.pendingLessons || []).concat([{ targets, text, ts: now() }]).slice(-10);
+      }
+    }
+    logEvent('feedback', { verdict, targets });
+  }
+  d.recent = [];
+  return verdict && targets.length ? { verdict, targets } : null;
+}
+
+function safeName(t) { return String(t).toLowerCase().replace(/^legion:/, '').replace(/[^a-z0-9_-]+/g, '-').slice(0, 64); }
+
+function addLesson(target, text) {
+  text = String(text || '').trim().replace(/\s+/g, ' ');
+  if (!target || !text) throw new Error('usage: lesson <agent-or-procedure> "<lesson>"');
+  if (isSensitive(text)) throw new Error('refused: Legion never stores secrets or sensitive personal data');
+  const file = path.join(LESSONS, safeName(target) + '.md');
+  fs.mkdirSync(LESSONS, { recursive: true });
+  const exists = fs.existsSync(file);
+  const cur = exists ? fs.readFileSync(file, 'utf8') : `# Lessons for ${safeName(target)}\n\n_Learned from this user's feedback. Apply them; the current request still wins._\n\n`;
+  if (norm(cur).includes(norm(text))) return { file, created: false };
+  fs.writeFileSync(file, cur + `- ${text.slice(0, 300)} _(${now().slice(0, 10)})_\n`);
+  logEvent('lesson', { target: safeName(target), text: text.slice(0, 160) });
+  return { file, created: true };
+}
+
+function listLessons() {
+  let files = [];
+  try { files = fs.readdirSync(LESSONS).filter(f => f.endsWith('.md')); } catch { /* none */ }
+  return files.map(f => {
+    const body = fs.readFileSync(path.join(LESSONS, f), 'utf8');
+    return { target: f.replace(/\.md$/, ''), count: (body.match(/^- /gm) || []).length, body };
+  });
+}
+
+function reliability(s) { const n = s.up + s.down; return n ? s.up / n : null; }
+
+function teamRecord(d) {
+  const rows = Object.entries(d.scores || {}).map(([name, s]) => ({ name, ...s, rate: reliability(s) }));
+  const rated = rows.filter(r => r.up + r.down >= 2);
+  return {
+    trusted: rated.filter(r => r.rate >= 0.75).sort((a, b) => b.rate - a.rate || b.up - a.up).slice(0, 5),
+    care: rated.filter(r => r.rate < 0.5).sort((a, b) => a.rate - b.rate).slice(0, 5),
+    all: rows.sort((a, b) => b.uses - a.uses)
+  };
 }
 
 /* ---------------- hooks ---------------- */
 
-// Keep a stable copy of this CLI at ~/.legion/bin/memory.js so agents, skills and Codex can call it.
+// Keep stable copies of the Legion CLIs in ~/.legion/bin so agents, skills and other tools can call them.
+const CLI_FILES = ['memory.js', 'council.js', 'mission-control.js', 'legion.js'];
 function ensureCli() {
   try {
-    const dest = path.join(LEGION_HOME, 'bin', 'memory.js');
-    if (path.resolve(dest) === path.resolve(__filename)) return;
-    const src = fs.readFileSync(__filename);
-    let cur = null; try { cur = fs.readFileSync(dest); } catch {}
-    if (!cur || !cur.equals(src)) { fs.mkdirSync(path.dirname(dest), { recursive: true }); fs.writeFileSync(dest, src); }
+    const binDir = path.join(LEGION_HOME, 'bin');
+    if (path.resolve(binDir) === path.resolve(__dirname)) return;
+    for (const f of CLI_FILES) {
+      const srcPath = path.join(__dirname, f);
+      if (!fs.existsSync(srcPath)) continue;
+      const src = fs.readFileSync(srcPath);
+      const dest = path.join(binDir, f);
+      let cur = null; try { cur = fs.readFileSync(dest); } catch {}
+      if (!cur || !cur.equals(src)) { fs.mkdirSync(binDir, { recursive: true }); fs.writeFileSync(dest, src); }
+    }
   } catch { /* best effort */ }
 }
 
@@ -262,30 +387,75 @@ function handlePrompt(d, prompt) {
   return saved;
 }
 
-async function hook(event) {
+const agentName = ti => String((ti && (ti.subagent_type || ti.agent || ti.name)) || '').replace(/^legion:/, '');
+const skillName = ti => String((ti && (ti.skill || ti.command || ti.name)) || '').replace(/^legion:/, '');
+
+async function hook(event, tool) {
+  // A Legion council reviewer is itself an AI session: never let its prompts or tools touch the user's memory.
+  if (process.env.LEGION_COUNCIL === '1') { if (tool === 'cursor') process.stdout.write('{}\n'); return; }
   const raw = await readStdin();
   let input = {};
   try { input = raw ? JSON.parse(raw) : {}; } catch { input = {}; }
   const d = load();
+  const src = tool || 'claude';
   if (event === 'session-start') {
     ensureCli();
-    process.stdout.write(context(d) + '\n');
+    logEvent('session', { tool: src, session: input.session_id || input.conversation_id || null });
+    if (src === 'cursor') process.stdout.write(JSON.stringify({ additional_context: context(d) }) + '\n');
+    else process.stdout.write(context(d) + '\n');
     return;
   }
   if (event === 'prompt') {
     if (input.transcript_path) d.session = { transcript: input.transcript_path, id: input.session_id || null, updated: now() };
-    const saved = handlePrompt(d, input.prompt || input.user_prompt || '');
+    const prompt = input.prompt || input.user_prompt || '';
+    const fb = judgePreviousTurn(d, prompt);
+    const saved = handlePrompt(d, prompt);
     save(d);
-    if (saved.length) process.stdout.write(`<legion-memory-update>Saved lasting preference(s): ${saved.map(s => `"${s}"`).join('; ')}. Apply from now on; mention it briefly to the user.</legion-memory-update>\n`);
+    const snippet = isSensitive(prompt) ? '(hidden)' : prompt.replace(/\s+/g, ' ').slice(0, 120);
+    logEvent('prompt', { tool: src, text: snippet });
+    if (src === 'cursor') { process.stdout.write(JSON.stringify({ continue: true }) + '\n'); return; }
+    const notes = [];
+    if (saved.length) notes.push(`Saved lasting preference(s): ${saved.map(s => `"${s}"`).join('; ')}. Apply from now on; mention it briefly to the user.`);
+    if (fb && fb.verdict === 'down') notes.push(`The user is unhappy with the last result from: ${fb.targets.join(', ')}. Fix it, then record what went wrong as a lesson: node ~/.legion/bin/memory.js lesson <agent-or-procedure> "<what to do differently>".`);
+    if (notes.length) process.stdout.write(`<legion-memory-update>${notes.join(' ')}</legion-memory-update>\n`);
+    return;
+  }
+  if (event === 'pre-tool') {
+    const ti = input.tool_input || {};
+    if (/^(Task|Agent)$/.test(input.tool_name || '')) logEvent('agent-start', { tool: src, agent: agentName(ti), task: String(ti.description || '').slice(0, 120), id: input.tool_use_id || null });
     return;
   }
   if (event === 'post-tool') {
     const ti = input.tool_input || {};
-    const tool = input.tool_name || '';
-    if (/^(Task|Agent)$/.test(tool)) bump(d.usage.agents, String(ti.subagent_type || ti.agent || '').replace(/^legion:/, ''));
-    if (tool === 'Skill') bump(d.usage.skills, String(ti.skill || ti.command || ti.name || '').replace(/^legion:/, ''));
+    const tr = input.tool_response || {};
+    const name = input.tool_name || '';
+    if (/^(Task|Agent)$/.test(name)) {
+      const a = agentName(ti);
+      bump(d.usage.agents, a); noteActivity(d, 'agent', a);
+      logEvent('agent-end', { tool: src, agent: a, id: input.tool_use_id || null, tokens: tr.totalTokens || null, ms: tr.totalDurationMs || null });
+    }
+    if (name === 'Skill') {
+      const sk = skillName(ti);
+      bump(d.usage.skills, sk); noteActivity(d, 'skill', sk);
+      logEvent('skill', { tool: src, skill: sk });
+    }
     save(d);
+    return;
   }
+  // Cursor subagent lifecycle
+  if (event === 'subagent-start') {
+    logEvent('agent-start', { tool: src, agent: String(input.subagent_type || '').replace(/^legion:/, ''), task: String(input.task || '').slice(0, 120), id: input.subagent_id || input.tool_call_id || null });
+    if (src === 'cursor') process.stdout.write(JSON.stringify({ permission: 'allow' }) + '\n');
+    return;
+  }
+  if (event === 'subagent-stop') {
+    const a = String(input.subagent_type || '').replace(/^legion:/, '');
+    bump(d.usage.agents, a); noteActivity(d, 'agent', a); save(d);
+    logEvent('agent-end', { tool: src, agent: a, status: input.status || null, ms: input.duration_ms || null });
+    if (src === 'cursor') process.stdout.write('{}\n');
+    return;
+  }
+  if (event === 'stop') { logEvent('turn-end', { tool: src }); return; }
 }
 
 /* ---------------- cost report ---------------- */
@@ -399,9 +569,13 @@ Usage: node memory.js <command>
   learn                         promote repeated observations
   forget <id|text>              remove a rule or observation
   report [--json] [--codex]     token/cost report for the current session (main thread + each agent)
+  scores                        team scoreboard: uses, approvals and corrections per agent/pack
+  feedback up|down [--target n] score the agents/packs used in the last turn (or one target)
+  lesson <name> "<lesson>"      save a lesson an agent or procedure must apply next time
+  lessons [name] [--clear-pending]  list lessons (and pending corrections)
   export                        print everything as JSON
   reset --yes                   wipe memory
-  hook <session-start|prompt|post-tool>   (used by Claude Code hooks; reads JSON on stdin)
+  hook <event> [--tool claude|cursor]  used by tool hooks; reads JSON on stdin
 Data: ${DIR}`;
 
 async function main(argv) {
@@ -422,12 +596,38 @@ async function main(argv) {
     case 'learn': { const p = learn(d); save(d); console.log(p.length ? `Promoted ${p.length}:\n- ${p.join('\n- ')}` : 'Nothing to promote.'); break; }
     case 'forget': { const n = forget(d, positional(args)); save(d); console.log(n ? `Removed ${n} item(s).` : 'Nothing matched.'); break; }
     case 'report': console.log(report(d, args)); break;
+    case 'scores': console.log(scoresText(d)); break;
+    case 'feedback': {
+      const verdict = args[0] === 'up' || args[0] === 'down' ? args[0] : null;
+      if (!verdict) { console.error('usage: feedback up|down [--target <name>]'); process.exitCode = 1; break; }
+      const targets = arg(args, '--target') ? [arg(args, '--target')] : (d.recent || []).map(r => r.name);
+      for (const t of targets) score(d, safeName(t), verdict);
+      save(d); logEvent('feedback', { verdict, targets });
+      console.log(targets.length ? `Recorded ${verdict === 'up' ? '👍' : '👎'} for ${targets.join(', ')}.` : 'No recent agent or pack to score — pass --target <name>.');
+      break;
+    }
+    case 'lesson': {
+      const target = args[0]; const text = positional(args.slice(1));
+      const r = addLesson(target, text);
+      console.log(r.created ? `Lesson saved for ${safeName(target)} → ${r.file}` : 'Lesson already recorded.');
+      break;
+    }
+    case 'lessons': {
+      if (args.includes('--clear-pending')) { d.pendingLessons = []; save(d); console.log('Pending corrections cleared.'); break; }
+      const target = args.find(a => !a.startsWith('--'));
+      const all = listLessons();
+      const pick = target ? all.filter(l => l.target === safeName(target)) : all;
+      if (!pick.length) console.log(target ? `No lessons for ${target}.` : 'No lessons yet.');
+      for (const l of pick) console.log(target ? l.body : `${l.target} — ${l.count} lesson(s)`);
+      if (!target && (d.pendingLessons || []).length) console.log(`\nPending corrections (${d.pendingLessons.length}):\n` + d.pendingLessons.map(p => `  [${p.targets.join(', ')}] ${p.text}`).join('\n'));
+      break;
+    }
     case 'export': console.log(JSON.stringify(d, null, 2)); break;
     case 'reset':
       if (!args.includes('--yes')) { console.error('Add --yes to confirm wiping Legion memory.'); process.exitCode = 1; break; }
       save(empty()); console.log('Legion memory wiped.'); break;
     case 'hook':
-      try { await hook(args[0]); } catch { /* hooks must never block the session */ }
+      try { await hook(args[0], arg(args, '--tool')); } catch { /* hooks must never block the session */ }
       break;
     default: console.log(HELP);
   }
@@ -436,4 +636,4 @@ async function main(argv) {
 if (require.main === module) {
   main(process.argv.slice(2)).catch(e => { console.error(e.message); process.exitCode = 1; });
 }
-module.exports = { claudeUsage, codexUsage, report, ensureCli, extractPreferences, detectLang, isSensitive, categorize, addRule, observe, forget, learn, handlePrompt, renderProfile, empty, context };
+module.exports = { LEGION_HOME, load, save, logEvent, readEvents, classifyFeedback, judgePreviousTurn, noteActivity, addLesson, listLessons, teamRecord, scoresText, claudeUsage, codexUsage, report, ensureCli, extractPreferences, detectLang, isSensitive, categorize, addRule, observe, forget, learn, handlePrompt, renderProfile, empty, context };

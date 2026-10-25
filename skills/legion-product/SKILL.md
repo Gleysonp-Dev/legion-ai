@@ -1,6 +1,6 @@
 ---
 name: legion-product
-description: "Product Management playbook with 10 ready procedures: prd writer, user stories, prioritization, mvp scoping, feature spec, competitive analysis, product metrics, customer feedback synthesis, roadmap builder, launch plan. Use for any product management task."
+description: "Product Management pack with 10 ready procedures: prd writer, user stories, prioritization, mvp scoping, feature spec, competitive analysis, product metrics, customer feedback synthesis, roadmap builder, launch plan. Use for any product management task."
 ---
 # Product Management — Legion pack
 
@@ -23,7 +23,8 @@ Pick the procedure that matches the task, then **read only that file** from `pro
 1. Choose the best-matching procedure (or combine two if the task clearly spans them).
 2. Read `procedures/<name>.md` and follow its steps.
 3. Finish with its quality checklist and show the evidence for each item — **no proof, not done**.
-4. If `~/.legion/memory/profile.md` exists, apply the user's recorded preferences.
+4. If `~/.legion/memory/profile.md` exists, apply the user's recorded preferences; if `~/.legion/lessons/<procedure>.md` exists, apply those lessons from past corrections.
+5. If the procedure needed rework, save what to do differently: `node ~/.legion/bin/memory.js lesson <procedure> "<lesson>"`.
 
 ## Specialists for this pack
 `product-manager`, `requirements-analyst`, `roadmap-planner`, `ux-researcher`. For large or multi-part work, use the `legion` skill so the conductor can split it across agents.

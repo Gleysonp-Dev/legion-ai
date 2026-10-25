@@ -1,6 +1,6 @@
 ---
 name: legion-cloud
-description: "Cloud & Infrastructure playbook with 10 ready procedures: aws architecture, gcp architecture, azure architecture, serverless app, edge deploy, cloud cost review, iam least privilege, dns domains, disaster recovery, vps setup. Use for any cloud & infrastructure task."
+description: "Cloud & Infrastructure pack with 10 ready procedures: aws architecture, gcp architecture, azure architecture, serverless app, edge deploy, cloud cost review, iam least privilege, dns domains, disaster recovery, vps setup. Use for any cloud & infrastructure task."
 ---
 # Cloud & Infrastructure — Legion pack
 
@@ -23,7 +23,8 @@ Pick the procedure that matches the task, then **read only that file** from `pro
 1. Choose the best-matching procedure (or combine two if the task clearly spans them).
 2. Read `procedures/<name>.md` and follow its steps.
 3. Finish with its quality checklist and show the evidence for each item — **no proof, not done**.
-4. If `~/.legion/memory/profile.md` exists, apply the user's recorded preferences.
+4. If `~/.legion/memory/profile.md` exists, apply the user's recorded preferences; if `~/.legion/lessons/<procedure>.md` exists, apply those lessons from past corrections.
+5. If the procedure needed rework, save what to do differently: `node ~/.legion/bin/memory.js lesson <procedure> "<lesson>"`.
 
 ## Specialists for this pack
 `cloud-architect`, `cloud-security-engineer`, `cost-optimizer`, `devops-engineer`. For large or multi-part work, use the `legion` skill so the conductor can split it across agents.

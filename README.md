@@ -5,8 +5,8 @@
 <h1 align="center">Legion</h1>
 
 <p align="center">
-  <b>80 specialist AI agents that split the work · 300 ready-made procedures · proof for every result · a memory that learns how you work</b><br>
-  For <b>Claude Code</b> and <b>Codex</b> · Windows, macOS and Linux · two commands to install
+  <b>An AI team that splits the work, proves the result, gets checked by other AIs — and learns how you work.</b><br>
+  80 agents · 300 procedures · 10 playbooks · for <b>Claude Code</b>, <b>Codex</b>, <b>Gemini CLI</b> and <b>Cursor</b> · Windows, macOS, Linux
 </p>
 
 <p align="center">
@@ -19,20 +19,19 @@
 
 ## What is Legion?
 
-Legion turns your coding assistant into a coordinated team. Ask for something big — *"build a landing page with signup, tests and deploy"* — and Legion's conductor breaks it into subtasks, sends each one to the right specialist **in parallel**, merges the results, verifies them, and remembers what you liked for next time.
+Legion turns your coding assistant into a coordinated team. Ask for something big — *"build a signup page with validation and deploy it"* — and Legion's conductor splits it into subtasks, runs the right specialists **in parallel**, merges and verifies the work, and reports what it cost.
 
-**Legion's promise: the team proves what it did and shows what it cost.**
+What makes it different:
 
 | | |
 |---|---|
-| **80 agents** | 10 teams of 8 specialists: command, backend, frontend & devices, data & AI, infrastructure, quality, security, product & design, content, business |
-| **300 procedures** | 30 skill packs × 10 step-by-step procedures with quality checklists, loaded only when needed |
-| **No proof, not done** | Every task ends with an evidence table: the command, test or file that proves each requirement |
-| **Cost report** | See the tokens used by the main conversation and by each agent — `memory.js report` |
-| **Lean by design** | ~9k tokens of always-on context (60% less than v1.0), cheap models for simple agents, solo/lite/full modes |
-| **Learning memory** | Detects your preferences ("always answer in Portuguese", "use pnpm") and applies them in every session — stored only on your computer |
-| **Two tools** | Claude Code (plugin with agents, skills and hooks) and Codex (custom agents, skills and `AGENTS.md`) |
-| **Zero dependencies** | Just Node.js 18+ and git |
+| ⚖️ **AI Council** | Claude, Codex and Gemini **review each other's work**, read-only. One writes, the others challenge; the author fixes or rejects each finding with a reason. |
+| 📘 **Learns from outcomes** | Say "perfect" or "that's wrong" and Legion scores the agents that did the work and writes **lessons** they read next time. It gets better *for you*. |
+| 📡 **Mission Control** | A live local dashboard: agents working right now, token cost per agent, team scoreboard, lessons, council verdicts, memory. |
+| ✅ **No proof, not done** | Every task ends with an evidence table — the command, test or file that proves each requirement — plus a cost report. |
+| 🗺️ **Playbooks** | End-to-end recipes: SaaS MVP, IoT product, mobile app, AI assistant with RAG, security hardening and more. |
+| 🧠 **Memory** | Remembers your language, stack and style (`"from now on use pnpm"`) — stored only on your computer. |
+| 🪶 **Lean** | ~9k tokens of always-on context; cheap models for simple agents; solo / lite / full modes. |
 
 ## Install
 
@@ -43,7 +42,7 @@ git clone https://github.com/Gleysonp-Dev/legion-ai.git
 node legion-ai/install.js
 ```
 
-That's it. The installer detects Claude Code and/or Codex and sets up both. Restart them afterwards.
+The installer detects **Claude Code, Codex, Gemini CLI and Cursor** and sets up each one it finds. Restart them afterwards. Needs Node.js 18+ and git.
 
 <details>
 <summary>Other ways to install</summary>
@@ -64,54 +63,112 @@ claude plugin marketplace add Gleysonp-Dev/legion-ai
 claude plugin install legion@legion-ai
 ```
 
-**Only one tool**: `node install.js --claude` or `node install.js --codex`
-**Preview without changing anything**: `node install.js --dry-run`
+**Choose tools**: `node install.js --claude --codex --gemini --cursor` (any combination)
+**Preview**: `node install.js --dry-run`
 </details>
 
 **Update:** `git -C legion-ai pull && node legion-ai/install.js`
-**Uninstall:** `node legion-ai/install.js --uninstall` (add `--purge` to also delete your memory)
+**Uninstall:** `node legion-ai/install.js --uninstall` (add `--purge` to also delete memory and lessons)
+
+| Tool | Agents | Skills | Memory & learning | Live dashboard |
+|---|---|---|---|---|
+| Claude Code | plugin subagents | plugin skills | automatic (hooks) | full activity + cost |
+| Codex | `~/.codex/agents` | `~/.agents/skills` | via `AGENTS.md` instructions | council, lessons, cost |
+| Gemini CLI | `~/.gemini/agents` | `~/.agents/skills` | via `GEMINI.md` instructions | council, lessons |
+| Cursor | `~/.cursor/agents` | `~/.agents/skills` | automatic (hooks) | activity |
 
 ## Use it
 
-| You want to… | Claude Code | Codex |
+| You want to… | Claude Code | Codex / Gemini CLI / Cursor |
 |---|---|---|
-| Run the whole team on a big task | `/legion:legion full build a SaaS dashboard with auth and billing` — or just *"use legion to build…"* | `$legion full build a SaaS dashboard with auth and billing` |
-| Keep it cheap | `/legion:legion lite …` (max 3 agents) | `$legion lite …` |
-| Call one specialist | "use the **debugger** agent to find why login fails" | "spawn the **debugger** agent to find why login fails" |
-| Use a skill pack | `/legion:legion-security` or just describe the task | `$legion-security` or just describe the task |
-| Find the right agent/skill | `/legion:legion-help` | `$legion-help` |
-| See what Legion learned about you | `/legion:legion-memory` | `$legion-memory` |
-| See what a session cost | `node ~/.legion/bin/memory.js report` | `node ~/.legion/bin/memory.js report --codex` |
+| Put the team on a big task | `/legion:legion full build a SaaS dashboard` — or *"use legion to…"* | `$legion full …` (Codex) or *"use the legion skill to…"* |
+| Keep it cheap | `/legion:legion lite …` | same, with `lite` |
+| Run a whole project | `/legion:legion-playbooks` → *"SaaS MVP for dog walkers"* | *"use legion-playbooks: IoT product"* |
+| Get other AIs to review | `/legion:legion-council` or `node ~/.legion/bin/council.js review` | same command, with `--host codex` / `gemini` / `cursor` |
+| Call one specialist | *"use the debugger agent to…"* | Codex: *"spawn debugger"* · Gemini: `@debugger` |
+| Watch everything live | `node ~/.legion/bin/legion.js dashboard` | same |
+| See what it cost | `node ~/.legion/bin/legion.js report` | `report --codex` for Codex |
+| Find the right agent | `/legion:legion-help` | `$legion-help` / *"legion-help"* |
 
-Skill packs also trigger automatically when your request matches their description; the pack then opens only the one procedure it needs. (If you installed with `--files` instead of the plugin, Claude Code skills have no `legion:` prefix: `/legion`, `/legion-security`.)
+## ⚖️ The AI Council
 
-## How it works
+Different AI models make different mistakes. The council lets them catch each other's:
+
+```bash
+cd your-project
+node ~/.legion/bin/council.js status --host claude      # who can review (Codex, Gemini…)
+node ~/.legion/bin/council.js review --host claude --focus "signup must validate email"
+node ~/.legion/bin/council.js plan docs/plan.md         # challenge a plan before building
+node ~/.legion/bin/council.js ask "Postgres or DynamoDB here?"
+```
+
+- Reviewers run **read-only** (Codex `--sandbox read-only`, Claude limited to Read/Grep/Glob, Gemini headless) and never review their own work.
+- They answer in a strict format; Legion merges duplicates, ranks by severity and computes a consensus (approve / changes / reject).
+- The author has the final word: each finding is **fixed or rejected with a reason**. Reports are saved in `~/.legion/council/`.
+- Uses the AI tools you already have installed and logged in — each review spends tokens on that tool.
+
+Example verdict (real run, Claude reviewing a change made by Codex):
+
+| id | severity | where | issue | raised by |
+|---|---|---|---|---|
+| F1 | blocker | app.js:2 | `signup(email)` saves input without any validation | claude |
+| F2 | major | app.js:2 | email not normalised (trim/lowercase) → duplicate accounts | claude |
+
+## 📘 Legion learns from outcomes
 
 ```mermaid
 flowchart LR
-    U([You]) --> C{{Conductor<br/>legion skill}}
-    M[(Memory<br/>~/.legion)] -. preferences .-> C
-    C -->|plan| S[Task splitter]
-    C -->|wave 1, in parallel| A1[backend-engineer]
-    C -->|wave 1, in parallel| A2[ui-engineer]
-    C -->|wave 1, in parallel| A3[copywriter]
-    A1 & A2 & A3 --> I[Integrator]
-    I --> Q[QA gatekeeper]
-    Q -->|pass| R([Result])
-    Q -->|fail| C
-    R -. learned preferences .-> M
+  W[Agents do the work] --> U{You react}
+  U -- "perfect / works" --> UP[👍 score up]
+  U -- "that's wrong" --> DN[👎 score down + correction noted]
+  DN --> L[Lesson written for that agent or procedure]
+  L --> N[Next run: agent reads its lessons first]
+  UP --> T[Conductor prefers proven agents]
 ```
 
-1. **Memory** — your saved preferences are loaded at the start of every session.
-2. **Plan** — the conductor restates the goal and builds a dispatch table: subtask, agent, dependencies, wave, acceptance criteria.
-3. **Dispatch** — independent subtasks run in parallel; dependent ones wait for their inputs.
-4. **Integrate & prove** — the integrator merges; the QA gatekeeper runs real checks (tests, builds) and fills the evidence table. No proof, not done.
-5. **Report** — result, evidence and the token cost of the run.
-6. **Learn** — new preferences you expressed are saved for next time.
+- **Scoreboard:** every agent and pack gets 👍/👎 from your reactions right after its work (`legion.js scores`). Works in English, Portuguese and Spanish.
+- **Lessons:** after a correction, the conductor writes one actionable lesson (`~/.legion/lessons/ui-engineer.md`: *"Check the layout at 360px before reporting done"*). That agent reads it on every future run.
+- **Team record in memory:** the conductor sees which agents are proven with you and which need closer checking.
+- Scores are approximate (a reaction applies to everything used in that turn); correct them with `memory.js feedback up|down --target <name>`.
 
-**Modes:** *solo* (no agents, for quick fixes) · *lite* (up to 3 agents) · *full* (whole team). Legion picks the cheapest mode that does the job well, or you choose.
+## 📡 Mission Control
 
-## The 10 teams
+```bash
+node ~/.legion/bin/legion.js dashboard
+```
+
+<p align="center"><img src="assets/mission-control.png" alt="Legion Mission Control dashboard" width="900"></p>
+
+A local page (127.0.0.1 only, nothing leaves your computer) that updates live: agents working right now, activity feed, token cost per agent, team scoreboard, council verdicts, lessons and memory.
+
+## 🗺️ Playbooks
+
+| Playbook | What you get |
+|---|---|
+| `saas-mvp` | auth, core feature, billing (test mode), CI/CD, monitoring |
+| `landing-page-launch` | copy, fast page, lead capture, analytics, domain |
+| `iot-product` | firmware, MQTT, time-series storage, live dashboard, alerts, OTA |
+| `mobile-app` | app with offline sync, push, analytics, store release |
+| `api-service` | OpenAPI spec, tested endpoints, docs, deploy, load test |
+| `ai-assistant-rag` | document Q&A with citations, evals, guardrails, cost control |
+| `security-hardening` | threat model, audit, fixes, council review, re-test |
+| `data-dashboard` | metric definitions, clean pipelines, trusted dashboard |
+| `legacy-upgrade` | safety-net tests, step-by-step upgrade, rollback |
+| `open-source-launch` | clean history, README, CI, licence, launch posts |
+
+Each lists who works in which wave, what each step delivers and **what proves it is done**.
+
+## How a run works
+
+1. **Memory** — your preferences, team record and lessons are loaded.
+2. **Mode** — *solo* (no agents), *lite* (≤3) or *full* (whole team): the cheapest that does the job well.
+3. **Plan** — dispatch table: subtask, agent, dependencies, wave, how it will be proven.
+4. **Dispatch** — independent subtasks in parallel; dependent ones wait.
+5. **Integrate & prove** — QA runs real checks; the council reviews important work.
+6. **Report** — result, evidence table, cost.
+7. **Learn** — preferences, scores and lessons are updated.
+
+## The 10 teams (80 agents)
 
 | Team | Agents |
 |---|---|
@@ -126,60 +183,52 @@ flowchart LR
 | **Content, Docs & Marketing** | technical-writer, documentation-engineer, copywriter, seo-specialist, content-strategist, translator, social-media-manager, presentation-designer |
 | **Business, Research & Ops** | business-analyst, financial-analyst, market-researcher, research-analyst, project-manager, operations-automator, legal-researcher, customer-success-advisor |
 
-## 300 procedures in 30 skill packs
+Simple agents run on Haiku, deep-reasoning ones (conductor, architect, chief reviewer, debugger, security auditor, threat modeler) on Opus, the rest on Sonnet. In Codex this maps to low/medium/high reasoning effort; Gemini CLI and Cursor use your current model. Force one model for all Claude Code subagents with `CLAUDE_CODE_SUBAGENT_MODEL`.
+
+## 300 procedures in 30 packs
 
 Planning · Architecture · Frontend · Backend · APIs · Databases · Testing · Debugging · Code quality · Security · DevOps · Cloud · Performance · Reliability · Data engineering · Data analysis · Machine learning · LLMs & agents · Mobile · Git · Documentation · UX/UI · Product · Marketing · Writing · Research · Business & finance · Productivity · Legal & privacy · IoT & embedded
 
-Each pack is one skill (`legion-testing`, `legion-security`, `legion-iot`…) holding 10 procedures. Only the pack's short index is always in context; the procedure you need is read on demand. Every procedure has a *when to use*, numbered steps, a quality checklist and an expected output. See the [full catalogue](docs/CATALOG.md).
+Each pack is one skill (`legion-testing`, `legion-iot`…) with 10 procedures read on demand — only the short index stays in context. See the [full catalogue](docs/CATALOG.md).
 
-## Memory that learns your style
+## Memory, privacy and commands
 
-Legion keeps a small, readable memory in `~/.legion/memory/` — **nothing is sent anywhere**.
-
-- **Explicit** — "remember that…", "from now on…", "a partir de agora…" → saved immediately.
-- **Implicit** — "always…", "never…", "I prefer…", "sempre…", "prefiro…" → observed; saved once you repeat it.
-- **Language** — Legion notices which language you write in and replies in it.
-- **Habits** — tracks which agents and skills you use most.
-- **Safe by default** — passwords, keys, tokens, card/account numbers, ID numbers and health data are never stored.
+Everything lives in `~/.legion/` on your computer: `memory/` (preferences), `lessons/`, `council/` reports and `events.jsonl` (dashboard feed). Passwords, keys, tokens, card/account numbers, ID numbers and health data are never stored.
 
 ```bash
-node ~/.legion/bin/memory.js show              # what Legion knows
-node ~/.legion/bin/memory.js add "Use TypeScript strict mode" --category stack
-node ~/.legion/bin/memory.js forget r3         # remove a rule
-node ~/.legion/bin/memory.js report            # tokens used this session, per agent
-node ~/.legion/bin/memory.js reset --yes       # wipe everything
+node ~/.legion/bin/legion.js show                 # what Legion knows about you
+node ~/.legion/bin/legion.js scores               # team scoreboard
+node ~/.legion/bin/legion.js lessons              # lessons learned
+node ~/.legion/bin/legion.js report               # tokens this session, per agent
+node ~/.legion/bin/legion.js add "Use TypeScript strict mode"
+node ~/.legion/bin/legion.js forget r3
+node ~/.legion/bin/memory.js reset --yes          # wipe memory
 ```
-
-In Claude Code the memory runs automatically through hooks. In Codex it runs through the Legion block the installer adds to `~/.codex/AGENTS.md`.
 
 ## Good to know
 
-- **Context cost.** Every installed skill and agent adds a one-line description to the assistant's context. Legion keeps that to about **9k tokens** per session in Claude Code (measured with `claude plugin details legion`). You can still disable it per project: `claude plugin disable legion@legion-ai --scope local`.
-- **Models per agent.** Simple agents (context-scout, translator, social-media-manager, dependency-auditor) run on Haiku, deep-reasoning ones (conductor, software-architect, chief-reviewer, debugger, security-auditor, threat-modeler) on Opus, the rest on Sonnet. In Codex this maps to low/medium/high reasoning effort. To force one model for every subagent in Claude Code, set `CLAUDE_CODE_SUBAGENT_MODEL`.
-- **Parallelism.** Claude Code runs several subagents at once. In Codex you can raise the limit in `~/.codex/config.toml`:
-  ```toml
-  [agents]
-  max_concurrent_threads_per_session = 8
-  ```
-- **Your files are safe.** The installer never overwrites skills, agents or `AGENTS.md` content you already had; uninstall removes only what Legion added.
-- **Not professional advice.** Legal, financial and compliance agents produce drafts and analysis, not legal or financial advice.
+- **Context cost:** ~9k tokens per Claude Code session (measured with `claude plugin details legion`). Disable per project with `claude plugin disable legion@legion-ai --scope local`.
+- **Council cost:** each reviewer is a full run of that AI tool on your account.
+- **Codex parallelism:** raise the limit in `~/.codex/config.toml` → `[agents] max_concurrent_threads_per_session = 8`.
+- **Your files are safe:** the installer never overwrites your own skills, agents, `AGENTS.md`/`GEMINI.md` content or Cursor hooks; uninstall removes only what Legion added.
+- **Not professional advice:** legal, financial and compliance agents produce drafts and analysis.
 
 ## Project layout
 
 ```
-src/agents/*.md        ← agent definitions (edit these)
-src/skills/*.md        ← procedure definitions, grouped into packs (edit these)
-src/core-skills/       ← legion, legion-memory, legion-help
-scripts/build.js       → generates agents/, skills/, codex/agents/, docs/CATALOG.md
-scripts/memory.js      ← learning memory CLI + Claude Code hooks
-install.js             ← cross-platform installer
-.claude-plugin/        ← Claude Code plugin + marketplace manifests
-hooks/hooks.json       ← Claude Code hooks
+src/agents/*.md            ← agent definitions (edit these)
+src/skills/*.md            ← procedures, grouped into packs (edit these)
+src/core-skills/           ← legion, legion-council, legion-playbooks, legion-memory, legion-help
+scripts/build.js           → agents/ (Claude), codex/ gemini/ cursor/ agents, skills/, docs/CATALOG.md
+scripts/memory.js          ← memory, learning, lessons, cost report, tool hooks
+scripts/council.js         ← cross-AI review
+scripts/mission-control.js ← live dashboard
+install.js                 ← cross-platform installer for the 4 tools
 ```
 
 ## Contributing
 
-Add or improve agents and skills in `src/`, run `npm run build && npm test`, and open a pull request. See [CONTRIBUTING.md](CONTRIBUTING.md).
+Add or improve agents, procedures and playbooks in `src/`, run `npm run build && npm test`, open a pull request. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 

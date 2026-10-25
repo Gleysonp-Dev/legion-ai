@@ -1,27 +1,20 @@
 {
-  "description": "Legion learning memory: injects the user's profile at session start, learns preferences from prompts, and tracks which agents/skills are used.",
+  "description": "Legion: injects your learned profile at session start, learns preferences and outcomes from your prompts, and feeds Mission Control with agent activity.",
   "hooks": {
     "SessionStart": [
-      {
-        "hooks": [
-          { "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/memory.js\" hook session-start", "timeout": 10 }
-        ]
-      }
+      { "hooks": [ { "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/memory.js\" hook session-start", "timeout": 10 } ] }
     ],
     "UserPromptSubmit": [
-      {
-        "hooks": [
-          { "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/memory.js\" hook prompt", "timeout": 10 }
-        ]
-      }
+      { "hooks": [ { "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/memory.js\" hook prompt", "timeout": 10 } ] }
+    ],
+    "PreToolUse": [
+      { "matcher": "Task|Agent", "hooks": [ { "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/memory.js\" hook pre-tool", "timeout": 10 } ] }
     ],
     "PostToolUse": [
-      {
-        "matcher": "Task|Agent|Skill",
-        "hooks": [
-          { "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/memory.js\" hook post-tool", "timeout": 10 }
-        ]
-      }
+      { "matcher": "Task|Agent|Skill", "hooks": [ { "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/memory.js\" hook post-tool", "timeout": 10 } ] }
+    ],
+    "Stop": [
+      { "hooks": [ { "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/memory.js\" hook stop", "timeout": 10 } ] }
     ]
   }
 }

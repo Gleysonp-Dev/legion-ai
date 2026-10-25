@@ -144,8 +144,8 @@
   ],
   "procedures": 300,
   "packs": 30,
-  "coreSkills": 3,
-  "registeredSkills": 33,
+  "coreSkills": 5,
+  "registeredSkills": 35,
   "categories": [
     {
       "id": "planning",
@@ -783,7 +783,9 @@
   ],
   "core": [
     "legion",
+    "legion-council",
     "legion-help",
-    "legion-memory"
+    "legion-memory",
+    "legion-playbooks"
   ]
 }

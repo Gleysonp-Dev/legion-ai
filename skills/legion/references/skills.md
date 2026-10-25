@@ -1,12 +1,14 @@
 # Legion skill registry
 
-300 procedures in 30 packs + 3 core skills. Invoke the pack skill (e.g. `legion-testing`), then read `procedures/<name>.md` inside it.
+300 procedures in 30 packs + 5 core skills. Invoke the pack skill (e.g. `legion-testing`), then read `procedures/<name>.md` inside it.
 
 ## Core
 
 - `legion`
+- `legion-council`
 - `legion-help`
 - `legion-memory`
+- `legion-playbooks`
 
 ## Planning & Delivery — pack `legion-planning` — agents: `conductor`, `task-splitter`, `project-manager`
 

@@ -23,4 +23,4 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           node scripts/build.js
-          git diff --exit-code -- agents skills codex catalog.json docs/CATALOG.md
+          git diff --exit-code -- agents skills codex gemini cursor catalog.json docs/CATALOG.md

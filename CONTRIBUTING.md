@@ -27,3 +27,9 @@ Agents live in `src/agents/` (one file per team, 8 agents each). Each needs `des
 - Never edit `agents/`, `skills/`, `codex/agents/` or `docs/CATALOG.md` by hand — they are generated.
 - Keep content defensive and honest: no offensive-security tooling, no claims of legal/financial advice.
 - Memory must never store secrets or sensitive personal data; add tests in `tests/memory.test.js` for new detection rules.
+
+## Playbooks
+`src/core-skills/legion-playbooks/playbooks/*.md`. Reference procedures as `` `legion-<pack>` → procedure-a, procedure-b `` and agents by name in the first column; `npm test` checks that every reference exists.
+
+## Council, memory and dashboard
+`scripts/council.js`, `scripts/memory.js` and `scripts/mission-control.js` are zero-dependency Node scripts. Keep them that way, and add tests in `tests/`.

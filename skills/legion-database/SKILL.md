@@ -1,6 +1,6 @@
 ---
 name: legion-database
-description: "Databases & Data Modelling playbook with 10 ready procedures: schema design, migration writer, query optimization, sql writer, nosql modeling, orm usage, backup restore, seed data, postgres tuning, data integrity audit. Use for any databases & data modelling task."
+description: "Databases & Data Modelling pack with 10 ready procedures: schema design, migration writer, query optimization, sql writer, nosql modeling, orm usage, backup restore, seed data, postgres tuning, data integrity audit. Use for any databases & data modelling task."
 ---
 # Databases & Data Modelling — Legion pack
 
@@ -23,7 +23,8 @@ Pick the procedure that matches the task, then **read only that file** from `pro
 1. Choose the best-matching procedure (or combine two if the task clearly spans them).
 2. Read `procedures/<name>.md` and follow its steps.
 3. Finish with its quality checklist and show the evidence for each item — **no proof, not done**.
-4. If `~/.legion/memory/profile.md` exists, apply the user's recorded preferences.
+4. If `~/.legion/memory/profile.md` exists, apply the user's recorded preferences; if `~/.legion/lessons/<procedure>.md` exists, apply those lessons from past corrections.
+5. If the procedure needed rework, save what to do differently: `node ~/.legion/bin/memory.js lesson <procedure> "<lesson>"`.
 
 ## Specialists for this pack
 `database-architect`, `backend-engineer`. For large or multi-part work, use the `legion` skill so the conductor can split it across agents.
