@@ -249,7 +249,8 @@ function isDuplicate(type, data) {
   const key = data.agent || data.skill;
   if (!key) return false;
   const cutoff = Date.now() - 20000;
-  return readEvents(40).some(e => e.type === type && (e.agent || e.skill) === key && Date.parse(e.ts) >= cutoff);
+  // Two reports with different ids are two real runs (e.g. two parallel agents of the same kind).
+  return readEvents(40).some(e => e.type === type && (e.agent || e.skill) === key && Date.parse(e.ts) >= cutoff && !(e.id && data.id && e.id !== data.id));
 }
 
 function logEvent(type, data = {}) {
@@ -354,7 +355,7 @@ function teamRecord(d) {
 /* ---------------- hooks ---------------- */
 
 // Keep stable copies of the Legion CLIs in ~/.legion/bin so agents, skills and other tools can call them.
-const CLI_FILES = ['memory.js', 'council.js', 'mission-control.js', 'legion.js'];
+const CLI_FILES = ['memory.js', 'council.js', 'mission-control.js', 'legion.js', 'codex-watch.js'];
 function ensureCli() {
   try {
     const binDir = path.join(LEGION_HOME, 'bin');
@@ -402,7 +403,7 @@ function handlePrompt(d, prompt) {
 
 // Apps can prepend their own instructions to the user's prompt (e.g. <system-reminder> blocks).
 // Those are not the user's words: never learn preferences or feedback from them, never show them.
-const INJECTED = /<(system-reminder|system|command-[a-z-]+|local-command-[a-z-]+|ide_[a-z_]+|user-prompt-submit-hook|environment_details|context)>[\s\S]*?<\/\1>/gi;
+const INJECTED = /<(system-reminder|system|command-[a-z-]+|local-command-[a-z-]+|ide_[a-z_]+|user-prompt-submit-hook|environment_details|environment_context|user_instructions|agent-message|context)>[\s\S]*?<\/\1>/gi;
 function stripInjected(p) { return typeof p === 'string' ? p.replace(INJECTED, ' ').replace(/\s+/g, ' ').trim() : ''; }
 
 const agentName = ti => String((ti && (ti.subagent_type || ti.agent || ti.name)) || '').replace(/^legion:/, '');
@@ -535,14 +536,36 @@ function newestFile(dir, re, depth = 4) {
 }
 
 // Codex session log: last token_count event holds the session totals.
+// Codex threads can live for months (hundreds of MB): read only the tail and report the current turn.
+function readTail(file, bytes) {
+  const size = fs.statSync(file).size;
+  const start = Math.max(0, size - bytes);
+  const buf = Buffer.alloc(size - start);
+  const fd = fs.openSync(file, 'r');
+  try { fs.readSync(fd, buf, 0, buf.length, start); } finally { fs.closeSync(fd); }
+  const rows = [];
+  let text = buf.toString('utf8');
+  if (start > 0) text = text.slice(text.indexOf('\n') + 1);
+  for (const l of text.split('\n')) { if (!l.trim()) continue; try { rows.push(JSON.parse(l)); } catch { /* skip */ } }
+  return rows;
+}
+
 function codexUsage(file) {
-  let total = null;
-  for (const r of readJsonl(file)) {
+  let total = null, atTurnStart = null, turnStart = null, lastSeen = null;
+  for (const r of readTail(file, 8 * 1024 * 1024)) {
     const pl = r.payload || r;
-    if (pl && pl.type === 'token_count' && pl.info && pl.info.total_token_usage) total = pl.info.total_token_usage;
+    if (!pl) continue;
+    if (pl.type === 'task_started') { atTurnStart = lastSeen; turnStart = r.timestamp || null; }
+    if (pl.type === 'token_count' && pl.info && pl.info.total_token_usage) { total = pl.info.total_token_usage; lastSeen = total; }
   }
   if (!total) return null;
-  return { tool: 'Codex', file, main: { input: (total.input_tokens || 0) - (total.cached_input_tokens || 0), cacheWrite: 0, cacheRead: total.cached_input_tokens || 0, output: (total.output_tokens || 0) + (total.reasoning_output_tokens || 0), turns: null }, agents: {} };
+  const base = atTurnStart || { input_tokens: 0, cached_input_tokens: 0, output_tokens: 0, reasoning_output_tokens: 0 };
+  const diff = k => Math.max(0, (total[k] || 0) - (base[k] || 0));
+  return {
+    tool: 'Codex', file, turnStart,
+    main: { input: diff('input_tokens') - diff('cached_input_tokens'), cacheWrite: 0, cacheRead: diff('cached_input_tokens'), output: diff('output_tokens') + diff('reasoning_output_tokens'), turns: null },
+    agents: {}
+  };
 }
 
 const fmt = n => n >= 1e6 ? (n / 1e6).toFixed(2) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(1) + 'k' : String(n);

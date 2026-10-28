@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.2.0 — 2026-10-28
+- **Codex watcher** (`codex-watch.js`, run by Mission Control): reads Codex's own session logs, so Codex subagents (e.g. `qa_gatekeeper`, `chief_reviewer`) appear live with their tokens, your prompts feed memory and the approval/correction scoreboard, and Codex's auto-review (guardian) threads are ignored. Only new bytes are read, even for multi-hundred-MB threads.
+- Codex cost now shows the **current turn** (not the whole months-long thread) plus its subagents, and reads only the end of the log.
+- Duplicate filter keeps parallel runs of the same agent (different ids); `<agent-message>`, `<environment_context>` and `<user_instructions>` blocks are ignored as user text.
+
 ## 2.1.2 — 2026-10-24
 - Memory and the dashboard ignore instructions that apps inject into prompts (`<system-reminder>` blocks etc.): they are never shown as your words nor learned as preferences.
 

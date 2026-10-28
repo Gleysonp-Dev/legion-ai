@@ -73,7 +73,7 @@ claude plugin install legion@legion-ai
 | Tool | Agents | Skills | Memory & learning | Live dashboard |
 |---|---|---|---|---|
 | Claude Code | plugin subagents | plugin skills | automatic (hooks) | full activity + cost |
-| Codex | `~/.codex/agents` | `~/.agents/skills` | via `AGENTS.md` instructions | activity (reported by Legion), cost |
+| Codex | `~/.codex/agents` | `~/.agents/skills` | read from Codex's own session logs | agents, prompts and cost read from Codex logs |
 | Gemini CLI | `~/.gemini/agents` | `~/.agents/skills` | via `GEMINI.md` instructions | activity (reported by Legion) |
 | Cursor | `~/.cursor/agents` | `~/.agents/skills` | automatic (hooks) | activity |
 
@@ -143,7 +143,7 @@ npm run dashboard                                   # from the legion-ai folder,
 
 <p align="center"><img src="assets/mission-control.png" alt="Legion Mission Control dashboard" width="900"></p>
 
-A local page (127.0.0.1 only, nothing leaves your computer) that updates live — fed by hooks in Claude Code and Cursor, and by Legion itself (`memory.js event`) in Codex and Gemini CLI: agents working right now, activity feed, token cost per agent, team scoreboard, council verdicts, lessons and memory.
+A local page (127.0.0.1 only, nothing leaves your computer) that updates live — fed by hooks in Claude Code and Cursor, by Codex's own session logs (read automatically while the dashboard is open — agents, your prompts, approvals/corrections and cost), and by Legion itself (`memory.js event`) in Gemini CLI: agents working right now, activity feed, token cost per agent, team scoreboard, council verdicts, lessons and memory.
 
 ## 🗺️ Playbooks
 

@@ -15,6 +15,8 @@ const os = require('os');
 const path = require('path');
 const { spawn } = require('child_process');
 const mem = require('./memory.js');
+let codexWatch = null;
+try { codexWatch = require('./codex-watch.js'); } catch { /* optional */ }
 
 const args = process.argv.slice(2);
 const opt = (f, d) => { const i = args.indexOf(f); return i >= 0 && args[i + 1] ? args[i + 1] : d; };
@@ -48,7 +50,22 @@ function cost(d) {
     if (f) cands.push({ t: fs.statSync(f).mtimeMs, get: () => mem.codexUsage(f) });
   } catch { /* ignore */ }
   cands.sort((a, b) => b.t - a.t);
-  for (const c of cands) { try { const u = c.get(); if (u) return u; } catch { /* next */ } }
+  for (const c of cands) {
+    try {
+      const u = c.get();
+      if (!u) continue;
+      if (u.tool === 'Codex') {
+        // Codex subagents run in their own threads: add the ones that finished during this turn.
+        const since = u.turnStart ? Date.parse(u.turnStart) : 0;
+        for (const e of mem.readEvents(400)) {
+          if (e.type !== 'agent-end' || e.tool !== 'codex' || Date.parse(e.ts) < since) continue;
+          const a = u.agents[e.agent] || (u.agents[e.agent] = { calls: 0, tokens: 0, ms: 0, tools: 0 });
+          a.calls++; a.tokens += e.tokens || 0;
+        }
+      }
+      return u;
+    } catch { /* next */ }
+  }
   return null;
 }
 
@@ -164,7 +181,7 @@ function renderState(){
   $('sub').textContent=(S.version?'v'+S.version+' · ':'')+S.home;
   const sc=S.scores||[]; const up=sc.reduce((a,r)=>a+r.up,0), dn=sc.reduce((a,r)=>a+r.down,0);
   $('k-approval').textContent=up+dn?Math.round(up*100/(up+dn))+'%':'—';
-  if(S.cost){const m=S.cost.main;const ag=Object.values(S.cost.agents||{}).reduce((a,x)=>a+x.tokens,0);$('k-tokens').textContent=fmt(m.input+m.cacheWrite+m.output+ag);$('k-tokens-l').textContent='tokens this '+S.cost.tool+' session';
+  if(S.cost){const m=S.cost.main;const ag=Object.values(S.cost.agents||{}).reduce((a,x)=>a+x.tokens,0);$('k-tokens').textContent=fmt(m.input+m.cacheWrite+m.output+ag);$('k-tokens-l').textContent='tokens this '+S.cost.tool+(S.cost.tool==='Codex'?' turn':' session');
     const rows=[['main conversation',m.input+m.cacheWrite+m.output]].concat(Object.entries(S.cost.agents||{}).map(([k,v])=>[k,v.tokens])).sort((a,b)=>b[1]-a[1]);
     const max=Math.max(1,...rows.map(r=>r[1]));
     $('cost').innerHTML='<table>'+rows.map(r=>'<tr><td>'+esc(r[0])+'</td><td style="width:45%"><div class="bar"><i style="width:'+(r[1]*100/max).toFixed(1)+'%"></i></div></td><td>'+fmt(r[1])+'</td></tr>').join('')+'</table><p class="empty" style="margin:8px 0 0">+ '+fmt(m.cacheRead)+' tokens re-read from cache (cheap)</p>';
@@ -230,6 +247,8 @@ if (require.main === module) {
     if (e.code === 'EADDRINUSE') { console.log(`Mission Control is already running: http://127.0.0.1:${PORT}`); if (!args.includes('--no-open')) openBrowser(`http://127.0.0.1:${PORT}`); }
     else console.error(e.message);
   });
+  // Codex has no hooks: follow its session logs while the dashboard is open.
+  if (codexWatch) { const w = () => { try { codexWatch.scan(); } catch { /* keep serving */ } }; w(); setInterval(w, 2000).unref(); }
   server.listen(PORT, '127.0.0.1', () => {
     const url = `http://127.0.0.1:${PORT}`;
     console.log(`⚔  Legion Mission Control → ${url}   (Ctrl+C to stop)`);

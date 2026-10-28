@@ -181,3 +181,54 @@ test('instructions injected by apps are not treated as the user speaking', () =>
   assert.match(ev, /crie uma página/);
   assert.doesNotMatch(fs.readFileSync(path.join(home, 'memory', 'memory.json'), 'utf8'), /French/);
 });
+
+test('Codex watcher turns Codex session logs into Legion activity and learning', () => {
+  const lh = fs.mkdtempSync(path.join(os.tmpdir(), 'legion-cw-'));
+  const ch = fs.mkdtempSync(path.join(os.tmpdir(), 'codex-'));
+  const now = new Date();
+  const dir = path.join(ch, 'sessions', String(now.getFullYear()), String(now.getMonth() + 1).padStart(2, '0'), String(now.getDate()).padStart(2, '0'));
+  fs.mkdirSync(dir, { recursive: true });
+  const J = o => JSON.stringify(o) + '\n';
+  const ts = () => new Date().toISOString();
+  const root = path.join(dir, 'rollout-root.jsonl');
+  fs.writeFileSync(root, J({ timestamp: ts(), type: 'session_meta', payload: { id: 'root1', thread_source: 'user' } }) +
+    J({ timestamp: ts(), type: 'event_msg', payload: { type: 'task_started' } }) +
+    J({ timestamp: ts(), type: 'response_item', payload: { type: 'message', role: 'user', content: [{ type: 'input_text', text: '<environment_context>sempre use inglês</environment_context>' }] } }) +
+    J({ timestamp: ts(), type: 'response_item', payload: { type: 'message', role: 'user', content: [{ type: 'input_text', text: 'A partir de agora use pnpm. Faça uma auditoria pré-lançamento com o legion.' }] } }) +
+    J({ timestamp: ts(), type: 'event_msg', payload: { type: 'task_started' } }));
+  const sub = path.join(dir, 'rollout-sub.jsonl');
+  fs.writeFileSync(sub, J({ timestamp: ts(), type: 'session_meta', payload: { id: 'sub1', thread_source: 'subagent', agent_role: 'qa_gatekeeper', agent_path: '/root/prelaunch_qa', source: { subagent: { thread_spawn: { agent_role: 'qa_gatekeeper' } } } } }) +
+    J({ timestamp: ts(), type: 'event_msg', payload: { type: 'token_count', info: { total_token_usage: { total_tokens: 5000 } } } }) +
+    J({ timestamp: ts(), type: 'event_msg', payload: { type: 'task_complete' } }));
+  const env = { ...process.env, LEGION_HOME: lh, CODEX_HOME: ch };
+  const scan = () => spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'codex-watch.js')], { encoding: 'utf8', env });
+  assert.strictEqual(scan().status, 0);
+  assert.strictEqual(scan().status, 0); // second scan must not duplicate anything
+  let ev = fs.readFileSync(path.join(lh, 'events.jsonl'), 'utf8').trim().split('\n').map(JSON.parse);
+  assert.strictEqual(ev.filter(e => e.type === 'agent-start' && e.agent === 'qa-gatekeeper').length, 1);
+  assert.strictEqual(ev.find(e => e.type === 'agent-end').tokens, 5000);
+  assert.ok(ev.some(e => e.type === 'prompt' && /auditoria/.test(e.text)));
+  assert.ok(!ev.some(e => /environment_context|inglês/.test(JSON.stringify(e))));
+  let store = JSON.parse(fs.readFileSync(path.join(lh, 'memory', 'memory.json'), 'utf8'));
+  assert.ok(store.rules.some(r => /pnpm/.test(r.text)), 'explicit preference learned from Codex');
+  // the user approves the result in Codex → the agent gets a 👍
+  fs.appendFileSync(root, J({ timestamp: ts(), type: 'response_item', payload: { type: 'reasoning' } }) +
+    J({ timestamp: ts(), type: 'response_item', payload: { type: 'message', role: 'user', content: [{ type: 'input_text', text: 'tool output that says wrong' }] } }) +
+    J({ timestamp: ts(), type: 'event_msg', payload: { type: 'task_started' } }) +
+    J({ timestamp: ts(), type: 'response_item', payload: { type: 'message', role: 'user', content: [{ type: 'input_text', text: 'perfeito!' }] } }));
+  scan();
+  store = JSON.parse(fs.readFileSync(path.join(lh, 'memory', 'memory.json'), 'utf8'));
+  assert.strictEqual(store.scores['qa-gatekeeper'].up, 1);
+});
+
+test('Codex cost reads only the tail and reports the current turn', () => {
+  const f = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'cx-')), 's.jsonl');
+  const J = o => JSON.stringify(o) + '\n';
+  fs.writeFileSync(f, J({ payload: { type: 'token_count', info: { total_token_usage: { input_tokens: 1000000, cached_input_tokens: 0, output_tokens: 5000 } } } }) +
+    J({ timestamp: '2026-10-28T10:00:00Z', payload: { type: 'task_started' } }) +
+    J({ payload: { type: 'token_count', info: { total_token_usage: { input_tokens: 1030000, cached_input_tokens: 20000, output_tokens: 7000, reasoning_output_tokens: 500 } } } }));
+  const u = m.codexUsage(f);
+  assert.strictEqual(u.main.input, 10000);
+  assert.strictEqual(u.main.cacheRead, 20000);
+  assert.strictEqual(u.main.output, 2500);
+});
