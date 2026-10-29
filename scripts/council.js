@@ -48,9 +48,34 @@ const REVIEWERS = {
   }
 };
 
+// Where the AI CLIs usually land when their installer could not add itself to PATH (common on Windows).
+function knownLocations(cmd) {
+  const h = os.homedir();
+  const list = [path.join(h, '.local', 'bin', cmd), path.join(h, '.npm-global', 'bin', cmd), path.join(h, '.bun', 'bin', cmd)];
+  if (IS_WIN) {
+    const appdata = process.env.APPDATA || path.join(h, 'AppData', 'Roaming');
+    list.unshift(path.join(h, '.local', 'bin', cmd + '.exe'));
+    list.push(path.join(appdata, 'npm', cmd + '.cmd'));
+  } else list.push('/opt/homebrew/bin/' + cmd, '/usr/local/bin/' + cmd);
+  return list;
+}
+
+const whichCache = {};
 function which(cmd) {
+  if (cmd in whichCache) return whichCache[cmd];
   const r = spawnSync(IS_WIN ? 'where' : 'which', [cmd], { encoding: 'utf8' });
-  return r.status === 0 ? r.stdout.split(/\r?\n/)[0].trim() : null;
+  const lines = r.status === 0 ? r.stdout.split(/\r?\n/).map(l => l.trim()).filter(Boolean) : [];
+  // Windows `where` can list an extensionless npm shim first; prefer something Windows can run.
+  let found = (IS_WIN && lines.find(l => /\.(exe|cmd|bat)$/i.test(l))) || lines[0] || null;
+  if (!found) found = knownLocations(cmd).find(f => { try { return fs.statSync(f).isFile(); } catch { return false; } }) || null;
+  return (whichCache[cmd] = found);
+}
+
+// Turn a CLI's raw failure into something the user can act on.
+const LOGIN_HINT = { codex: 'run `codex login`', claude: 'run `claude` once and sign in (/login)', gemini: 'run `gemini` once and sign in' };
+function explainError(key, text) {
+  if (/not logged in|please run \/login|login required|unauthori[sz]ed|authenticat|invalid api key|api key not/i.test(text || '')) return `not logged in — ${LOGIN_HINT[key] || 'sign in to this CLI'}`;
+  return text;
 }
 
 function detectHost() {
@@ -78,15 +103,26 @@ function runReviewer(key, prompt, { cwd, timeout }) {
   return new Promise(resolve => {
     const started = Date.now();
     let stdout = '', stderr = '', done = false;
-    // On Windows the AI CLIs are .cmd shims, which need a shell — so quote every argument ourselves.
-    const argv = IS_WIN ? r.args(outFile).map(x => (/[\s"&|<>^()]/.test(x) ? `"${x.replace(/"/g, '""')}"` : x)) : r.args(outFile);
-    const child = spawn(r.bin, argv, { cwd, shell: IS_WIN, env: { ...process.env, LEGION_COUNCIL: '1' } });
+    const bin = which(r.bin) || r.bin;
+    const env = { ...process.env, LEGION_COUNCIL: '1' };
+    let child;
+    if (IS_WIN && !/\.exe$/i.test(bin)) {
+      // .cmd shims need a shell: build one quoted command line ourselves (no unescaped args).
+      const q = x => (/[\s"&|<>^()]/.test(x) ? `"${x.replace(/"/g, '""')}"` : x);
+      child = spawn([bin, ...r.args(outFile)].map(q).join(' '), { cwd, shell: true, env });
+    } else child = spawn(bin, r.args(outFile), { cwd, env });
     const finish = (status, error) => {
       if (done) return; done = true;
       clearTimeout(timer);
       let text = stdout;
       if (r.readsOutFile) { try { text = fs.readFileSync(outFile, 'utf8') || stdout; fs.rmSync(outFile, { force: true }); } catch { /* use stdout */ } }
-      resolve({ key, label: r.label, ok: status === 0 && !error, error: error || (status !== 0 ? (stderr.trim().split('\n').slice(-3).join(' ') || `exit ${status}`) : null), text: text.trim(), ms: Date.now() - started });
+      const failed = status !== 0 || !!error;
+      const raw = error || (status !== 0 ? (stderr.trim().split('\n').slice(-3).join(' ') || text.trim().slice(0, 300) || `exit ${status}`) : null);
+      // Some CLIs exit 0 but only print a login prompt: treat that as a failure, not as a review.
+      const loginOnly = !failed && text.trim().length < 300 && /not logged in|please run \/login/i.test(text);
+      let err = null;
+      if (loginOnly || raw) { const why = explainError(key, `${raw || ''} ${text.slice(0, 500)}`); err = why.startsWith('not logged in') ? why : raw; }
+      resolve({ key, label: r.label, ok: !failed && !loginOnly, error: err, text: text.trim(), ms: Date.now() - started });
     };
     const timer = setTimeout(() => { try { child.kill(); } catch { /* ignore */ } finish(null, `timed out after ${Math.round(timeout / 1000)}s`); }, timeout);
     child.stdout.on('data', c => (stdout += c));
@@ -229,13 +265,19 @@ function renderAsk(question, results) {
 }
 
 function saveReport(mode, markdown, data) {
-  const dir = path.join(LEGION_HOME, 'council');
-  fs.mkdirSync(dir, { recursive: true });
   const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-  const file = path.join(dir, `${stamp}-${mode}.md`);
-  fs.writeFileSync(file, markdown + '\n');
-  fs.writeFileSync(file.replace(/\.md$/, '.json'), JSON.stringify(data, null, 2));
-  return file;
+  // Sandboxed hosts (e.g. Codex) may not let us write to ~/.legion: fall back to the temp folder.
+  // Mission Control's Codex watcher picks the report up from the "Saved:" line either way.
+  for (const dir of [path.join(LEGION_HOME, 'council'), path.join(os.tmpdir(), 'legion-council')]) {
+    try {
+      fs.mkdirSync(dir, { recursive: true });
+      const file = path.join(dir, `${stamp}-${mode}.md`);
+      fs.writeFileSync(file, markdown + '\n');
+      fs.writeFileSync(file.replace(/\.md$/, '.json'), JSON.stringify(data, null, 2));
+      return file;
+    } catch { /* try next */ }
+  }
+  return null;
 }
 
 /* ---------- CLI ---------- */
@@ -260,6 +302,7 @@ async function main(argv) {
   const { host, list } = pickReviewers(opts);
   if (!list.length) {
     console.log('Legion Council: no independent reviewer available (install another AI CLI: codex, claude or gemini, and log in). Fall back to the chief-reviewer agent.');
+    if (mem) mem.logEvent('council-skip', { mode: cmd, host, reason: 'no other AI CLI found' });
     process.exitCode = 2; return;
   }
   let prompt, mode, question;
@@ -282,9 +325,10 @@ async function main(argv) {
   if (mode === 'ask') { markdown = renderAsk(question, results); data = { mode, host, question, results }; }
   else { const merged = merge(results); markdown = renderReview(mode, merged, { host }); data = { mode, host, consensus: merged.consensus, findings: merged.findings, reviews: merged.reviews.map(r => ({ key: r.key, ok: r.ok, error: r.error, ms: r.ms, parsed: r.parsed })) }; }
   const file = saveReport(mode, markdown, data);
-  if (mem) mem.logEvent('council-end', { mode, reviewers: list, consensus: data.consensus || null, findings: (data.findings || []).length, file });
+  const failed = (data.reviews || data.results || []).filter(r => !r.ok).map(r => `${r.key}: ${r.error || 'failed'}`);
+  if (mem) mem.logEvent('council-end', { mode, reviewers: list, consensus: data.consensus || null, findings: (data.findings || []).length, failed, file });
   if (opts.json) console.log(JSON.stringify({ ...data, report: file }, null, 2));
-  else console.log(markdown + `\n\n_Saved: ${file}_`);
+  else console.log(markdown + (file ? `\n\n_Saved: ${file}_` : '\n\n_(report could not be saved)_'));
 }
 
 if (require.main === module) main(process.argv.slice(2)).catch(e => { console.error('Legion Council: ' + e.message); process.exitCode = 1; });

@@ -87,10 +87,72 @@ function userText(p) {
   return '';
 }
 
+// Text printed by a shell/tool call, whatever shape this Codex version logs it in.
+function toolOutput(p) {
+  if (!/(_call_output|exec_command_end)$/.test(p.type || '')) return '';
+  const o = p.output != null ? p.output : p.aggregated_output != null ? p.aggregated_output : p.stdout;
+  if (typeof o === 'string') return o;
+  if (Array.isArray(o)) return o.map(x => (x && typeof x.text === 'string' ? x.text : '')).join('\n');
+  if (o && typeof o.output === 'string') return o.output;
+  return '';
+}
+
+// Codex runs `council.js` inside its sandbox, which may not be allowed to write ~/.legion (or may point
+// LEGION_HOME elsewhere). The report path is printed as "_Saved: <file>_": bring it into ~/.legion/council.
+function importCouncil(text, info) {
+  if (/no independent reviewer available/.test(text)) {
+    mem.logEvent('council-skip', { tool: 'codex', reason: 'no other AI CLI found (install and sign in to Claude Code or Gemini CLI)' });
+    return;
+  }
+  const m = text.match(/Saved: ([^\n"]+?\.md)_/);
+  if (!m) return;
+  const src = m[1].replace(/\\+/g, '\\').replace(/\\n$/, '');
+  const name = path.basename(src.replace(/\\/g, '/'));
+  if (!/^[\w-]+\.md$/.test(name)) return;
+  const dir = path.join(mem.LEGION_HOME, 'council');
+  const dest = path.join(dir, name);
+  if (fs.existsSync(dest)) return; // already there (council.js could write it) or already imported
+  let data = null, md = null;
+  try { md = fs.readFileSync(src, 'utf8'); } catch { /* sandbox temp may be private */ }
+  try { data = JSON.parse(fs.readFileSync(src.replace(/\.md$/, '.json'), 'utf8')); } catch { /* rebuild below */ }
+  if (!md) { const i = text.indexOf('# Legion Council'); md = i >= 0 ? text.slice(i).split(/\\n|\n/).join('\n').replace(/\\r/g, '').replace(/\\"/g, '"').split(/\n?\{"chunk_id"|"\}\s*$/)[0] : null; }
+  if (!data && md) data = summarize(md, name);
+  if (!data) return;
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(dest, (md || '') + '\n');
+    fs.writeFileSync(dest.replace(/\.md$/, '.json'), JSON.stringify(data, null, 2));
+  } catch { return; }
+  const list = data.reviews || data.results || [];
+  mem.logEvent('council-end', { tool: 'codex', mode: data.mode, reviewers: list.map(r => r.key), consensus: data.consensus || null, findings: (data.findings || []).length, failed: list.filter(r => !r.ok).map(r => `${r.key}: ${r.error || 'failed'}`), file: dest });
+  info.councils = (info.councils || 0) + 1;
+}
+
+const KEYS = { codex: /codex|openai/i, claude: /claude|anthropic/i, gemini: /gemini|google/i };
+function keyOf(label) { return Object.keys(KEYS).find(k => KEYS[k].test(label)) || label.toLowerCase(); }
+
+// Minimal report data from the printed markdown, when the JSON file is not readable from here.
+function summarize(md, name) {
+  const mode = (name.match(/-(review|plan|ask)\.md$/) || [])[1] || 'review';
+  const lines = md.split('\n');
+  if (mode === 'ask') {
+    const results = [];
+    lines.forEach((l, i) => { const h = l.match(/^## (.+?)( — ⚠️ failed)?$/); if (h) results.push({ key: keyOf(h[1]), ok: !h[2], error: h[2] ? (lines.slice(i + 1).find(x => x.trim()) || '').trim() : null }); });
+    return { mode, results };
+  }
+  const c = md.match(/\*\*Consensus: \S+ ([a-z-]+)\*\*/);
+  const reviews = [];
+  for (const l of lines) { const r = l.match(/^\| ([^|]+?) \| (⚠️ failed|[^|]*) \| ([^|]*) \| \d+s \|$/); if (r && r[1] !== 'Reviewer') reviews.push({ key: keyOf(r[1]), ok: !/failed/.test(r[2]), error: /failed/.test(r[2]) ? r[3].trim() : null }); }
+  const findings = lines.filter(l => /^\| F\d+ \|/.test(l)).map(l => ({ severity: l.split('|')[2].trim() }));
+  return { mode, consensus: c ? c[1] : 'no-verdict', findings, reviews };
+}
+
 function handleLine(row, file, info, d) {
   const p = row.payload || {};
   if (row.type === 'session_meta') { classify(p, info, file); return; }
   if (info.ignore) return;
+  const out = toolOutput(p);
+  if (out && /Legion Council/.test(out)) importCouncil(out, info);
   if (p.type === 'token_count' && p.info && p.info.total_token_usage) { info.tokens = p.info.total_token_usage.total_tokens || info.tokens; return; }
   // The user's words arrive at the start of a turn; later "user" items are tool results, hand-backs or history.
   if (p.type === 'task_started') { info.turnOpen = true; return; }
@@ -150,4 +212,4 @@ function scan() {
 }
 
 if (require.main === module) { const n = scan(); console.log(`codex-watch: processed ${n} new log line(s).`); }
-module.exports = { scan, handleLine, readNew };
+module.exports = { scan, handleLine, readNew, importCouncil, summarize };

@@ -28,6 +28,8 @@ node ~/.legion/bin/council.js ask "Postgres or DynamoDB for this workload?" --ho
 Reviews can take a few minutes (default timeout 10 min per reviewer, `--timeout <s>` to change). Run it in the background if your tool allows, and keep working.
 
 If `status` shows no other AI installed, say so in one line and use the `chief-reviewer` agent instead.
+If a reviewer answers **"not logged in"**, tell the user the exact fix the report prints (e.g. run `claude` once and sign in) — do not count it as a review.
+Do **not** set `LEGION_HOME` or move the report elsewhere: Mission Control reads the `Saved:` line in your output and files the verdict itself, even when your sandbox cannot write to `~/.legion`.
 
 ## Handle the verdict — you have the final word
 For every finding (F1, F2…):

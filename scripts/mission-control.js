@@ -34,7 +34,8 @@ function councilReports(limit = 8) {
   return files.map(f => {
     try {
       const d = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8'));
-      return { file: f.replace(/\.json$/, '.md'), mode: d.mode, consensus: d.consensus || null, findings: (d.findings || []).length, reviewers: (d.reviews || d.results || []).map(r => r.key), at: f.slice(0, 19).replace(/T(\d\d)-(\d\d)-(\d\d)/, ' $1:$2:$3') };
+      const list = d.reviews || d.results || [];
+      return { file: f.replace(/\.json$/, '.md'), mode: d.mode, consensus: d.consensus || null, findings: (d.findings || []).length, reviewers: list.map(r => r.key), failed: list.filter(r => !r.ok).map(r => `${r.key}: ${r.error || 'failed'}`), answered: list.filter(r => r.ok).length, at: f.slice(0, 19).replace(/T(\d\d)-(\d\d)-(\d\d)/, ' $1:$2:$3') };
     } catch { return null; }
   }).filter(Boolean);
 }
@@ -145,7 +146,7 @@ code{background:var(--panel2);padding:1px 6px;border-radius:6px}
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fmt=n=>n==null?'—':n>=1e6?(n/1e6).toFixed(2)+'M':n>=1e3?(n/1e3).toFixed(1)+'k':String(n);
-const ICON={'agent-start':'▶️','agent-end':'✅','skill':'🧩','prompt':'💬','feedback':'⭐','lesson':'📘','council-start':'⚖️','council-end':'⚖️','session':'🟢','turn-end':'⏹️'};
+const ICON={'agent-start':'▶️','agent-end':'✅','skill':'🧩','prompt':'💬','feedback':'⭐','lesson':'📘','council-start':'⚖️','council-end':'⚖️','council-skip':'⚠️','session':'🟢','turn-end':'⏹️'};
 (function ring(){const g=document.getElementById('ring');for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,x=50+30*Math.cos(a),y=50+30*Math.sin(a);g.insertAdjacentHTML('beforeend','<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="5"/>');}})();
 let events=[], running=new Map(), S=null;
 function describe(e){
@@ -157,7 +158,8 @@ function describe(e){
     case 'feedback':return (e.verdict==='up'?'<span class="ok">approved</span>':'<span class="bad">corrected</span>')+' work by '+esc((e.targets||[]).join(', '));
     case 'lesson':return 'lesson for <b>'+esc(e.target)+'</b>: '+esc(e.text);
     case 'council-start':return 'council asked '+esc((e.reviewers||[]).join(', '))+' to '+esc(e.mode);
-    case 'council-end':return 'council verdict: <b>'+esc(e.consensus||'opinions')+'</b>'+(e.findings!=null?' · '+e.findings+' findings':'');
+    case 'council-end':return 'council '+(e.consensus&&e.consensus!=='no-verdict'?'verdict: <b>'+esc(e.consensus)+'</b>'+(e.findings!=null?' · '+e.findings+' findings':''):(e.failed||[]).length&&(e.failed.length>=(e.reviewers||[]).length)?'<b>failed</b> — '+esc(e.failed.join('; ')):'answered ('+esc(e.mode||'ask')+')')+((e.failed||[]).length&&e.consensus&&e.consensus!=='no-verdict'?' · ⚠️ '+esc(e.failed.join('; ')):'');
+    case 'council-skip':return 'council skipped — '+esc(e.reason||'no reviewer available');
     case 'session':return 'session started in '+esc(e.tool);
     case 'turn-end':return '<span style="color:var(--muted)">turn finished</span>';
     default:return esc(e.type);
@@ -188,7 +190,7 @@ function renderState(){
   } else $('cost').innerHTML='<p class="empty">Appears after your first Claude Code or Codex session with Legion installed.</p>';
   $('scores').innerHTML=sc.length?'<table><tr><th>agent / pack</th><th>uses</th><th>👍</th><th>👎</th><th>reliability</th></tr>'+sc.slice(0,15).map(r=>{const n=r.up+r.down,p=n?r.up/n:null;return '<tr><td>'+esc(r.name)+'</td><td>'+r.uses+'</td><td>'+r.up+'</td><td>'+r.down+'</td><td>'+(p==null?'<span class="empty">no feedback</span>':'<div style="display:flex;gap:8px;align-items:center"><div class="bar score" style="flex:1"><i style="width:'+Math.max(3,p*100).toFixed(0)+'%;background:'+(p>=.75?'var(--ok)':p<.5?'var(--bad)':'var(--warn)')+'"></i></div><span>'+Math.round(p*100)+'%</span></div>')+'</td></tr>'}).join('')+'</table>':'<p class="empty">No feedback yet. Say “perfeito” or “não era isso” after Legion works and the scoreboard fills in.</p>';
   const C={approve:'<span class="ok">approve</span>',changes:'<span class="warn">changes</span>',reject:'<span class="bad">reject</span>'};
-  $('council').innerHTML=(S.council||[]).length?'<table><tr><th>when</th><th>mode</th><th>reviewers</th><th>verdict</th><th>findings</th></tr>'+S.council.map(c=>'<tr><td>'+esc(c.at)+'</td><td>'+esc(c.mode)+'</td><td>'+esc(c.reviewers.join(', '))+'</td><td>'+(C[c.consensus]||'—')+'</td><td>'+c.findings+'</td></tr>').join('')+'</table>':'<p class="empty">No council runs yet. Try <code>node ~/.legion/bin/council.js review</code> in a project.</p>';
+  $('council').innerHTML=(S.council||[]).length?'<table><tr><th>when</th><th>mode</th><th>reviewers</th><th>verdict</th><th>findings</th></tr>'+S.council.map(c=>'<tr><td>'+esc(c.at)+'</td><td>'+esc(c.mode)+'</td><td>'+esc(c.reviewers.join(', '))+'</td><td>'+(c.consensus&&c.consensus!=='no-verdict'?(C[c.consensus]||esc(c.consensus)):c.failed.length&&!c.answered?'<span title="'+esc(c.failed.join('; '))+'">⚠️ '+esc(c.failed[0].slice(0,90))+'</span>':c.mode==='ask'?'💬 '+c.answered+' opinion(s)':'—')+'</td><td>'+c.findings+'</td></tr>').join('')+'</table>':'<p class="empty">No council runs yet. In a project run <code>node ~/.legion/bin/legion.js council review</code> (Windows: <code>$HOME\\.legion\\bin\\legion.js</code>).</p>';
   const L=S.lessons||[];
   $('lessons').innerHTML=(L.length?L.map(l=>'<div style="margin-bottom:8px"><b>'+esc(l.target)+'</b> <span class="tag">'+l.count+'</span><ul class="plain">'+l.items.slice(-4).map(i=>'<li>'+esc(i).replace(/_\\((\\d{4}-\\d\\d-\\d\\d)\\)_/,'<span class="tag">$1</span>')+'</li>').join('')+'</ul></div>').join(''):'<p class="empty">No lessons yet — they are written when work needs rework.</p>')+((S.pending||[]).length?'<p class="warn">'+S.pending.length+' correction(s) waiting to become lessons.</p>':'');
   const R=S.rules||[];

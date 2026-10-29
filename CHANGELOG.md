@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.2.1 — 2026-10-28
+- **Council verdicts from Codex reach the dashboard.** Codex's sandbox may not let `council.js` write to `~/.legion`; the report now falls back to the temp folder and Mission Control's Codex watcher imports it from the `Saved:` line (rebuilding the summary from the printed report if the file is private). "No reviewer available" shows as *council skipped*.
+- Reviewers that are **not logged in** are reported as such with the fix (`run claude once and sign in`), instead of an empty verdict. The dashboard shows failed councils and `ask` opinions instead of "—".
+- The council finds Claude Code / Codex / Gemini even when their installer did not add them to PATH (`~/.local/bin`, npm global). On Windows `.exe` CLIs run without a shell (no Node DEP0190 warning).
+
 ## 2.2.0 — 2026-10-28
 - **Codex watcher** (`codex-watch.js`, run by Mission Control): reads Codex's own session logs, so Codex subagents (e.g. `qa_gatekeeper`, `chief_reviewer`) appear live with their tokens, your prompts feed memory and the approval/correction scoreboard, and Codex's auto-review (guardian) threads are ignored. Only new bytes are read, even for multi-hundred-MB threads.
 - Codex cost now shows the **current turn** (not the whole months-long thread) plus its subagents, and reads only the end of the log.

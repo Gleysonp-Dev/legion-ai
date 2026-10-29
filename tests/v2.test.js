@@ -232,3 +232,51 @@ test('Codex cost reads only the tail and reports the current turn', () => {
   assert.strictEqual(u.main.cacheRead, 20000);
   assert.strictEqual(u.main.output, 2500);
 });
+
+test('Codex watcher imports council reports written outside ~/.legion (sandbox) and skips', () => {
+  const lh = fs.mkdtempSync(path.join(os.tmpdir(), 'legion-cc-'));
+  const ch = fs.mkdtempSync(path.join(os.tmpdir(), 'codex-'));
+  const elsewhere = fs.mkdtempSync(path.join(os.tmpdir(), 'council-state-'));
+  const report = path.join(elsewhere, '2026-10-28T18-32-52-ask.md');
+  fs.writeFileSync(report, '# Legion Council — second opinions\n\n## Claude (Anthropic) — ⚠️ failed\n\nnot logged in — run `claude` once and sign in (/login)\n');
+  fs.writeFileSync(report.replace(/\.md$/, '.json'), JSON.stringify({ mode: 'ask', results: [{ key: 'claude', ok: false, error: 'not logged in — run `claude` once and sign in (/login)' }] }));
+  const now = new Date();
+  const dir = path.join(ch, 'sessions', String(now.getFullYear()), String(now.getMonth() + 1).padStart(2, '0'), String(now.getDate()).padStart(2, '0'));
+  fs.mkdirSync(dir, { recursive: true });
+  const J = o => JSON.stringify(o) + '\n';
+  // Codex logs tool output as JSON inside JSON: paths arrive with escaped backslashes.
+  const inner = JSON.stringify({ exit_code: 0, output: `Legion Council: asking claude (read-only)…\n# Legion Council — second opinions\n\n_Saved: ${report}_\n` });
+  const review = '# Legion Council — review\n\n**Consensus: 🟡 changes** · reviewers: Claude (Anthropic)\n\n| Reviewer | Verdict | Summary | Time |\n|---|---|---|---|\n| Claude (Anthropic) | 🟡 changes | fix x | 12s |\n\n## Findings\n\n| id | severity | where | issue | suggested fix | raised by |\n|---|---|---|---|---|---|\n| F1 | major | a.js:3 | bug | fix | claude |\n\n_Saved: /private/sandbox/tmp/2026-10-28T19-00-00-review.md_\n';
+  fs.writeFileSync(path.join(dir, 'rollout-c.jsonl'), J({ type: 'session_meta', payload: { id: 'r', thread_source: 'user' } }) +
+    J({ type: 'response_item', payload: { type: 'custom_tool_call_output', output: [{ type: 'input_text', text: inner }] } }) +
+    J({ type: 'response_item', payload: { type: 'function_call_output', output: review } }) +
+    J({ type: 'response_item', payload: { type: 'function_call_output', output: 'Legion Council: no independent reviewer available (install another AI CLI…' } }));
+  const env = { ...process.env, LEGION_HOME: lh, CODEX_HOME: ch };
+  for (let i = 0; i < 2; i++) assert.strictEqual(spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'codex-watch.js')], { encoding: 'utf8', env }).status, 0);
+  const files = fs.readdirSync(path.join(lh, 'council')).sort();
+  assert.deepStrictEqual(files, ['2026-10-28T18-32-52-ask.json', '2026-10-28T18-32-52-ask.md', '2026-10-28T19-00-00-review.json', '2026-10-28T19-00-00-review.md']);
+  const rv = JSON.parse(fs.readFileSync(path.join(lh, 'council', '2026-10-28T19-00-00-review.json'), 'utf8'));
+  assert.strictEqual(rv.consensus, 'changes');
+  assert.strictEqual(rv.findings.length, 1);
+  const ev = fs.readFileSync(path.join(lh, 'events.jsonl'), 'utf8').trim().split('\n').map(JSON.parse);
+  assert.strictEqual(ev.filter(e => e.type === 'council-end').length, 2);
+  assert.match(ev.find(e => e.type === 'council-end' && e.mode === 'ask').failed[0], /not logged in/);
+  assert.strictEqual(ev.filter(e => e.type === 'council-skip').length, 1);
+});
+
+test('council reports a reviewer that is not logged in, with the fix', () => {
+  const bin = fs.mkdtempSync(path.join(os.tmpdir(), 'legion-bin-'));
+  const fake = path.join(bin, process.platform === 'win32' ? 'claude.cmd' : 'claude');
+  const script = path.join(bin, 'fake-claude.js');
+  fs.writeFileSync(script, "process.stdin.resume();process.stdin.on('end',()=>{console.log('Not logged in · Please run /login');process.exit(1)})");
+  fs.writeFileSync(fake, process.platform === 'win32' ? `@"${process.execPath}" "${script}" %*\r\n` : `#!/bin/sh\nexec "${process.execPath}" "${script}" "$@"\n`);
+  fs.chmodSync(fake, 0o755);
+  const lh = fs.mkdtempSync(path.join(os.tmpdir(), 'legion-nl-'));
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'council.js'), 'ask', 'is this ok?', '--host', 'codex', '--with', 'claude', '--json'], { encoding: 'utf8', env: { ...process.env, LEGION_HOME: lh, PATH: bin + path.delimiter + process.env.PATH } });
+  assert.strictEqual(r.status, 0, r.stderr);
+  const out = JSON.parse(r.stdout);
+  assert.strictEqual(out.results[0].ok, false);
+  assert.match(out.results[0].error, /not logged in — run `claude`/);
+  const ev = fs.readFileSync(path.join(lh, 'events.jsonl'), 'utf8').trim().split('\n').map(JSON.parse);
+  assert.match(ev.find(e => e.type === 'council-end').failed[0], /claude: not logged in/);
+});
