@@ -280,3 +280,24 @@ test('council reports a reviewer that is not logged in, with the fix', () => {
   const ev = fs.readFileSync(path.join(lh, 'events.jsonl'), 'utf8').trim().split('\n').map(JSON.parse);
   assert.match(ev.find(e => e.type === 'council-end').failed[0], /claude: not logged in/);
 });
+
+test('council explains Gemini account problems and the interactive login prompt', () => {
+  const bin = fs.mkdtempSync(path.join(os.tmpdir(), 'legion-bin-'));
+  const mk = (name, js) => {
+    const script = path.join(bin, `fake-${name}.js`);
+    fs.writeFileSync(script, js);
+    const fake = path.join(bin, process.platform === 'win32' ? `${name}.cmd` : name);
+    fs.writeFileSync(fake, process.platform === 'win32' ? `@"${process.execPath}" "${script}" %*\r\n` : `#!/bin/sh\nexec "${process.execPath}" "${script}" "$@"\n`);
+    fs.chmodSync(fake, 0o755);
+  };
+  mk('gemini', "process.stdin.resume();process.stdin.on('end',()=>{console.error('Error: x\\n    at throwIneligibleOrProjectIdError (file:///a.js:1:1)\\n    at _doSetupUser (file:///a.js:2:2)');process.exit(1)})");
+  mk('codex', "process.stdin.resume();process.stdin.on('end',()=>{process.stdout.write('Opening authentication page in your browser. Do you want to continue? [Y/n]: You are a reviewer');})");
+  const lh = fs.mkdtempSync(path.join(os.tmpdir(), 'legion-gm-'));
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'council.js'), 'ask', 'ok?', '--host', 'claude', '--with', 'gemini,codex', '--json'], { encoding: 'utf8', env: { ...process.env, LEGION_HOME: lh, PATH: bin + path.delimiter + process.env.PATH } });
+  assert.strictEqual(r.status, 0, r.stderr);
+  const out = JSON.parse(r.stdout);
+  const g = out.results.find(x => x.key === 'gemini'), c = out.results.find(x => x.key === 'codex');
+  assert.match(g.error, /GEMINI_API_KEY/);
+  assert.strictEqual(c.ok, false);
+  assert.match(c.error, /not logged in/);
+});

@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.2.3 — 2026-10-30
+- Council: overloaded (503) and quota (429) errors are explained; `LEGION_GEMINI_MODEL` lets the Gemini reviewer use a lighter model (e.g. Flash) when the default one is busy.
+
+## 2.2.2 — 2026-10-30
+- Council errors are readable: stack traces are dropped and known problems are explained — a Google account that cannot use Gemini's free login (`IneligibleOrProjectId`: use a `GEMINI_API_KEY`), and Gemini waiting for a browser login when called headless.
+- Reviewer timeouts are never shorter than 4 minutes (short `--timeout` values were cutting Claude off mid-review); the council skill tells hosts to run it in the background instead.
+- Dashboard: a verdict that one reviewer missed shows the reason next to it (e.g. `changes · ⚠️ gemini: …`).
+
 ## 2.2.1 — 2026-10-28
 - **Council verdicts from Codex reach the dashboard.** Codex's sandbox may not let `council.js` write to `~/.legion`; the report now falls back to the temp folder and Mission Control's Codex watcher imports it from the `Saved:` line (rebuilding the summary from the printed report if the file is private). "No reviewer available" shows as *council skipped*.
 - Reviewers that are **not logged in** are reported as such with the fix (`run claude once and sign in`), instead of an empty verdict. The dashboard shows failed councils and `ask` opinions instead of "—".

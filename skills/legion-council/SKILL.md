@@ -25,7 +25,7 @@ node ~/.legion/bin/council.js review --host claude --base main          # whole 
 node ~/.legion/bin/council.js plan docs/plan.md --host claude
 node ~/.legion/bin/council.js ask "Postgres or DynamoDB for this workload?" --host claude
 ```
-Reviews can take a few minutes (default timeout 10 min per reviewer, `--timeout <s>` to change). Run it in the background if your tool allows, and keep working.
+Reviews take 1–5 minutes: reviewers read the files. Keep the default timeout (10 min per reviewer; values under 240 s are raised to 240 s). If your shell call has its own time limit, start the council in the background and wait for it — do not shorten `--timeout`, or the verdict is lost.
 
 If `status` shows no other AI installed, say so in one line and use the `chief-reviewer` agent instead.
 If a reviewer answers **"not logged in"**, tell the user the exact fix the report prints (e.g. run `claude` once and sign in) — do not count it as a review.

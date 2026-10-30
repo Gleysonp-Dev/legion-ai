@@ -44,7 +44,8 @@ const REVIEWERS = {
   gemini: {
     bin: 'gemini',
     label: 'Gemini (Google)',
-    args: () => ['-p', 'You are a reviewer. Follow the instructions given on standard input exactly.']
+    // LEGION_GEMINI_MODEL picks a lighter model (e.g. a Flash one) when the default is overloaded.
+    args: () => [...(process.env.LEGION_GEMINI_MODEL ? ['-m', process.env.LEGION_GEMINI_MODEL] : []), '-p', 'You are a reviewer. Follow the instructions given on standard input exactly.']
   }
 };
 
@@ -74,6 +75,10 @@ function which(cmd) {
 // Turn a CLI's raw failure into something the user can act on.
 const LOGIN_HINT = { codex: 'run `codex login`', claude: 'run `claude` once and sign in (/login)', gemini: 'run `gemini` once and sign in' };
 function explainError(key, text) {
+  if (/IneligibleOrProjectId|not eligible|GOOGLE_CLOUD_PROJECT/i.test(text || '')) return 'this Google account cannot use the free Gemini login — create a key at aistudio.google.com/apikey, set GEMINI_API_KEY and pick "Use Gemini API Key" in `gemini` → /auth';
+  if (/\b503\b|UNAVAILABLE|high demand|overloaded/i.test(text || '')) return key === 'gemini' ? 'Gemini model overloaded (503) — try again later, or use a Flash model: setx LEGION_GEMINI_MODEL "<flash model name from gemini /model>"' : 'service overloaded (503) — try again later';
+  if (/\b429\b|RESOURCE_EXHAUSTED|quota/i.test(text || '')) return 'quota or rate limit reached (429) — wait a bit or check your plan/API key limits';
+  if (/Opening authentication page|Do you want to continue\? \[Y\/n\]/i.test(text || '')) return `not logged in — ${LOGIN_HINT[key] || 'sign in to this CLI'}`;
   if (/not logged in|please run \/login|login required|unauthori[sz]ed|authenticat|invalid api key|api key not/i.test(text || '')) return `not logged in — ${LOGIN_HINT[key] || 'sign in to this CLI'}`;
   return text;
 }
@@ -117,11 +122,13 @@ function runReviewer(key, prompt, { cwd, timeout }) {
       let text = stdout;
       if (r.readsOutFile) { try { text = fs.readFileSync(outFile, 'utf8') || stdout; fs.rmSync(outFile, { force: true }); } catch { /* use stdout */ } }
       const failed = status !== 0 || !!error;
-      const raw = error || (status !== 0 ? (stderr.trim().split('\n').slice(-3).join(' ') || text.trim().slice(0, 300) || `exit ${status}`) : null);
+      // Keep the message, drop stack-trace lines ("at foo (file:…)").
+      const msg = stderr.split(/\r?\n/).map(l => l.trim()).filter(l => l && !/^at /.test(l)).slice(-3).join(' ');
+      const raw = error || (status !== 0 ? (msg || stderr.trim().slice(-300) || text.trim().slice(0, 300) || `exit ${status}`) : null);
       // Some CLIs exit 0 but only print a login prompt: treat that as a failure, not as a review.
-      const loginOnly = !failed && text.trim().length < 300 && /not logged in|please run \/login/i.test(text);
+      const loginOnly = !failed && ((text.trim().length < 300 && /not logged in|please run \/login/i.test(text)) || /^\s*Opening authentication page/i.test(text));
       let err = null;
-      if (loginOnly || raw) { const why = explainError(key, `${raw || ''} ${text.slice(0, 500)}`); err = why.startsWith('not logged in') ? why : raw; }
+      if (loginOnly || raw) { const why = explainError(key, `${raw || ''} ${stderr.slice(-2000)} ${text.slice(0, 500)}`); err = why !== `${raw || ''} ${stderr.slice(-2000)} ${text.slice(0, 500)}` ? why : raw; }
       resolve({ key, label: r.label, ok: !failed && !loginOnly, error: err, text: text.trim(), ms: Date.now() - started });
     };
     const timer = setTimeout(() => { try { child.kill(); } catch { /* ignore */ } finish(null, `timed out after ${Math.round(timeout / 1000)}s`); }, timeout);
@@ -287,7 +294,7 @@ function positional(args) { const out = []; for (let i = 0; i < args.length; i++
 
 async function main(argv) {
   const [cmd, ...args] = argv;
-  const opts = { with: opt(args, '--with'), host: opt(args, '--host'), base: opt(args, '--base'), focus: opt(args, '--focus'), timeout: (Number(opt(args, '--timeout')) || 600) * 1000, cwd: process.cwd(), json: args.includes('--json') };
+  const opts = { with: opt(args, '--with'), host: opt(args, '--host'), base: opt(args, '--base'), focus: opt(args, '--focus'), timeout: Math.max(Number(opt(args, '--timeout')) || 600, 240) * 1000 /* reviewers read files: never less than 4 min */, cwd: process.cwd(), json: args.includes('--json') };
   if (!cmd || cmd === 'help' || cmd === '--help') {
     console.log(fs.readFileSync(__filename, 'utf8').split('\n').slice(2, 15).map(l => l.replace(/^ \* ?/, '')).join('\n'));
     return;
