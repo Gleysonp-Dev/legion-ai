@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.3.0 — 2026-10-30
+- **Gemini CLI on Mission Control.** New `gemini-watch.js` (run by the dashboard) reads Gemini CLI's chat logs (`~/.gemini/tmp/*/chats`): Legion subagents called from Gemini appear live, your Gemini prompts feed memory and the approval/correction scoreboard, and the cost panel shows the current Gemini turn (fresh input, cache and output tokens). Council reviewer sessions and injected context are ignored.
+- `memory.js report --gemini` for a Gemini cost report.
+
 ## 2.2.3 — 2026-10-30
 - Council: overloaded (503) and quota (429) errors are explained; `LEGION_GEMINI_MODEL` lets the Gemini reviewer use a lighter model (e.g. Flash) when the default one is busy.
 

@@ -61,7 +61,7 @@ Reply to the user with:
 |---|---|---|
 | … | `npm test` → 42 passed | ✅ |
 
-**Cost** — run `node ~/.legion/bin/memory.js report` and paste its short summary (main conversation, each agent's tokens, total). In Codex use `report --codex`.
+**Cost** — run `node ~/.legion/bin/memory.js report` and paste its short summary (main conversation, each agent's tokens, total). In Codex use `report --codex`, in Gemini CLI `report --gemini`.
 
 **Open risks** — only if any.
 

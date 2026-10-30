@@ -74,7 +74,7 @@ claude plugin install legion@legion-ai
 |---|---|---|---|---|
 | Claude Code | subagentes do plugin | skills do plugin | automático (hooks) | atividade completa + custo |
 | Codex | `~/.codex/agents` | `~/.agents/skills` | lido dos registros de sessão do Codex | agentes, mensagens e custo lidos dos registros do Codex |
-| Gemini CLI | `~/.gemini/agents` | `~/.agents/skills` | por instruções no `GEMINI.md` | atividade (avisada pelo Legion) |
+| Gemini CLI | `~/.gemini/agents` | `~/.agents/skills` | por instruções no `GEMINI.md` | atividade, mensagens e custo (lidos dos registros de chat do Gemini) |
 | Cursor | `~/.cursor/agents` | `~/.agents/skills` | automático (hooks) | atividade |
 
 > **App do Claude (modo Cowork):** as skills e agentes do Legion funcionam lá, mas o Cowork roda comandos numa área isolada própria, então o painel, a memória e as lições do seu computador podem não enxergar essa atividade. Para a experiência completa, use o Claude Code (terminal ou aba Code do app).
@@ -143,7 +143,7 @@ npm run dashboard                                   # dentro da pasta legion-ai,
 
 <p align="center"><img src="assets/mission-control.png" alt="Painel Mission Control do Legion" width="900"></p>
 
-Uma página local (só 127.0.0.1, nada sai do seu computador) que atualiza ao vivo — alimentada pelos hooks no Claude Code e no Cursor, pelos registros de sessão do próprio Codex (lidos automaticamente enquanto o painel está aberto — agentes, suas mensagens, aprovações/correções e custo) e pelo próprio Legion (`memory.js event`) no Gemini CLI: agentes trabalhando agora, atividade, custo por agente, placar do time, vereditos do conselho, lições e memória.
+Uma página local (só 127.0.0.1, nada sai do seu computador) que atualiza ao vivo — alimentada pelos hooks no Claude Code e no Cursor, pelos registros de sessão do próprio Codex (lidos automaticamente enquanto o painel está aberto — agentes, suas mensagens, aprovações/correções e custo) e pelos registros de chat do Gemini CLI (`~/.gemini/tmp/*/chats`, lidos do mesmo jeito): agentes trabalhando agora, atividade, custo por agente, placar do time, vereditos do conselho, lições e memória.
 
 ## 🗺️ Playbooks
 

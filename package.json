@@ -1,6 +1,6 @@
 {
   "name": "legion-ai",
-  "version": "2.2.3",
+  "version": "2.3.0",
   "description": "80 specialist AI agents, 300+ skills and a learning memory for Claude Code and Codex.",
   "license": "MIT",
   "private": true,

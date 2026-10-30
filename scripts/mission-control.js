@@ -17,6 +17,8 @@ const { spawn } = require('child_process');
 const mem = require('./memory.js');
 let codexWatch = null;
 try { codexWatch = require('./codex-watch.js'); } catch { /* optional */ }
+let geminiWatch = null;
+try { geminiWatch = require('./gemini-watch.js'); } catch { /* optional */ }
 
 const args = process.argv.slice(2);
 const opt = (f, d) => { const i = args.indexOf(f); return i >= 0 && args[i + 1] ? args[i + 1] : d; };
@@ -40,7 +42,7 @@ function councilReports(limit = 8) {
   }).filter(Boolean);
 }
 
-// Most recent session of either tool: Claude Code transcript (via hooks) or Codex session log.
+// Most recent session of any tool: Claude Code transcript (via hooks), Codex session log or Gemini CLI chat log.
 function cost(d) {
   const cands = [];
   try {
@@ -50,16 +52,21 @@ function cost(d) {
     const f = mem.newestFile(path.join(process.env.CODEX_HOME || path.join(os.homedir(), '.codex'), 'sessions'), /\.jsonl$/);
     if (f) cands.push({ t: fs.statSync(f).mtimeMs, get: () => mem.codexUsage(f) });
   } catch { /* ignore */ }
+  try {
+    const g = mem.newestGeminiUsage();
+    if (g) cands.push({ t: g.mtime, get: () => g });
+  } catch { /* ignore */ }
   cands.sort((a, b) => b.t - a.t);
   for (const c of cands) {
     try {
       const u = c.get();
       if (!u) continue;
-      if (u.tool === 'Codex') {
-        // Codex subagents run in their own threads: add the ones that finished during this turn.
+      if (u.tool === 'Codex' || u.tool === 'Gemini') {
+        // Subagents run outside the main log: add the ones that finished during this turn.
         const since = u.turnStart ? Date.parse(u.turnStart) : 0;
+        const tool = u.tool.toLowerCase();
         for (const e of mem.readEvents(400)) {
-          if (e.type !== 'agent-end' || e.tool !== 'codex' || Date.parse(e.ts) < since) continue;
+          if (e.type !== 'agent-end' || e.tool !== tool || Date.parse(e.ts) < since) continue;
           const a = u.agents[e.agent] || (u.agents[e.agent] = { calls: 0, tokens: 0, ms: 0, tools: 0 });
           a.calls++; a.tokens += e.tokens || 0;
         }
@@ -183,11 +190,11 @@ function renderState(){
   $('sub').textContent=(S.version?'v'+S.version+' · ':'')+S.home;
   const sc=S.scores||[]; const up=sc.reduce((a,r)=>a+r.up,0), dn=sc.reduce((a,r)=>a+r.down,0);
   $('k-approval').textContent=up+dn?Math.round(up*100/(up+dn))+'%':'—';
-  if(S.cost){const m=S.cost.main;const ag=Object.values(S.cost.agents||{}).reduce((a,x)=>a+x.tokens,0);$('k-tokens').textContent=fmt(m.input+m.cacheWrite+m.output+ag);$('k-tokens-l').textContent='tokens this '+S.cost.tool+(S.cost.tool==='Codex'?' turn':' session');
+  if(S.cost){const m=S.cost.main;const ag=Object.values(S.cost.agents||{}).reduce((a,x)=>a+x.tokens,0);$('k-tokens').textContent=fmt(m.input+m.cacheWrite+m.output+ag);$('k-tokens-l').textContent='tokens this '+S.cost.tool+(S.cost.tool==='Claude Code'?' session':' turn');
     const rows=[['main conversation',m.input+m.cacheWrite+m.output]].concat(Object.entries(S.cost.agents||{}).map(([k,v])=>[k,v.tokens])).sort((a,b)=>b[1]-a[1]);
     const max=Math.max(1,...rows.map(r=>r[1]));
     $('cost').innerHTML='<table>'+rows.map(r=>'<tr><td>'+esc(r[0])+'</td><td style="width:45%"><div class="bar"><i style="width:'+(r[1]*100/max).toFixed(1)+'%"></i></div></td><td>'+fmt(r[1])+'</td></tr>').join('')+'</table><p class="empty" style="margin:8px 0 0">+ '+fmt(m.cacheRead)+' tokens re-read from cache (cheap)</p>';
-  } else $('cost').innerHTML='<p class="empty">Appears after your first Claude Code or Codex session with Legion installed.</p>';
+  } else $('cost').innerHTML='<p class="empty">Appears after your first Claude Code, Codex or Gemini CLI session with Legion installed.</p>';
   $('scores').innerHTML=sc.length?'<table><tr><th>agent / pack</th><th>uses</th><th>👍</th><th>👎</th><th>reliability</th></tr>'+sc.slice(0,15).map(r=>{const n=r.up+r.down,p=n?r.up/n:null;return '<tr><td>'+esc(r.name)+'</td><td>'+r.uses+'</td><td>'+r.up+'</td><td>'+r.down+'</td><td>'+(p==null?'<span class="empty">no feedback</span>':'<div style="display:flex;gap:8px;align-items:center"><div class="bar score" style="flex:1"><i style="width:'+Math.max(3,p*100).toFixed(0)+'%;background:'+(p>=.75?'var(--ok)':p<.5?'var(--bad)':'var(--warn)')+'"></i></div><span>'+Math.round(p*100)+'%</span></div>')+'</td></tr>'}).join('')+'</table>':'<p class="empty">No feedback yet. Say “perfeito” or “não era isso” after Legion works and the scoreboard fills in.</p>';
   const C={approve:'<span class="ok">approve</span>',changes:'<span class="warn">changes</span>',reject:'<span class="bad">reject</span>'};
   $('council').innerHTML=(S.council||[]).length?'<table><tr><th>when</th><th>mode</th><th>reviewers</th><th>verdict</th><th>findings</th></tr>'+S.council.map(c=>'<tr><td>'+esc(c.at)+'</td><td>'+esc(c.mode)+'</td><td>'+esc(c.reviewers.join(', '))+'</td><td>'+(c.consensus&&c.consensus!=='no-verdict'?(C[c.consensus]||esc(c.consensus))+(c.failed.length?' <span title="'+esc(c.failed.join('; '))+'">· ⚠️ '+esc(c.failed.join('; ').slice(0,70))+'</span>':''):c.failed.length&&!c.answered?'<span title="'+esc(c.failed.join('; '))+'">⚠️ '+esc(c.failed[0].slice(0,90))+'</span>':c.mode==='ask'?'💬 '+c.answered+' opinion(s)'+(c.failed.length?' · ⚠️ '+esc(c.failed.join('; ').slice(0,70)):''):'—')+'</td><td>'+c.findings+'</td></tr>').join('')+'</table>':'<p class="empty">No council runs yet. In a project run <code>node ~/.legion/bin/legion.js council review</code> (Windows: <code>$HOME\\.legion\\bin\\legion.js</code>).</p>';
@@ -249,8 +256,9 @@ if (require.main === module) {
     if (e.code === 'EADDRINUSE') { console.log(`Mission Control is already running: http://127.0.0.1:${PORT}`); if (!args.includes('--no-open')) openBrowser(`http://127.0.0.1:${PORT}`); }
     else console.error(e.message);
   });
-  // Codex has no hooks: follow its session logs while the dashboard is open.
-  if (codexWatch) { const w = () => { try { codexWatch.scan(); } catch { /* keep serving */ } }; w(); setInterval(w, 2000).unref(); }
+  // Codex and Gemini CLI have no hooks: follow their session logs while the dashboard is open.
+  const watchers = [codexWatch, geminiWatch].filter(Boolean);
+  if (watchers.length) { const w = () => { for (const x of watchers) { try { x.scan(); } catch { /* keep serving */ } } }; w(); setInterval(w, 2000).unref(); }
   server.listen(PORT, '127.0.0.1', () => {
     const url = `http://127.0.0.1:${PORT}`;
     console.log(`⚔  Legion Mission Control → ${url}   (Ctrl+C to stop)`);

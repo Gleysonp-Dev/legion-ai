@@ -301,3 +301,43 @@ test('council explains Gemini account problems and the interactive login prompt'
   assert.strictEqual(c.ok, false);
   assert.match(c.error, /not logged in/);
 });
+
+test('Gemini watcher turns Gemini CLI chat logs into Legion activity, learning and cost', () => {
+  const lh = fs.mkdtempSync(path.join(os.tmpdir(), 'legion-gw-'));
+  const gh = fs.mkdtempSync(path.join(os.tmpdir(), 'gemini-'));
+  fs.mkdirSync(path.join(gh, 'agents'), { recursive: true });
+  fs.writeFileSync(path.join(gh, 'agents', 'qa-gatekeeper.md'), '---\nname: qa-gatekeeper\n---\n');
+  const chats = path.join(gh, 'tmp', 'my-app', 'chats');
+  fs.mkdirSync(chats, { recursive: true });
+  const J = o => JSON.stringify(o) + '\n';
+  const ts = () => new Date().toISOString();
+  const main = path.join(chats, 'session-2026-10-30T01-00-aaaa.jsonl');
+  fs.writeFileSync(main, J({ sessionId: 's1', projectHash: 'x', startTime: ts(), kind: 'main' }) +
+    J({ id: 'ctx', timestamp: ts(), type: 'user', content: [{ text: '<session_context>sempre use inglês</session_context>' }] }) +
+    J({ id: 'u1', timestamp: ts(), type: 'user', content: [{ text: 'A partir de agora use pnpm. Revise o checkout com o legion.' }] }) +
+    J({ id: 'g1', timestamp: ts(), type: 'gemini', content: '', tokens: { input: 1000, output: 100, cached: 400, thoughts: 50, total: 1150 }, model: 'gemini-3.8-flash' }) +
+    J({ id: 'g1', timestamp: ts(), type: 'gemini', content: '', tokens: { input: 1000, output: 100, cached: 400, thoughts: 50, total: 1150 }, toolCalls: [{ id: 'c1', name: 'qa_gatekeeper', args: { task: 'verify checkout' }, result: [{ text: 'ok' }], status: 'success' }] }) +
+    J({ $set: { lastUpdated: ts() } }));
+  const council = path.join(chats, 'session-2026-10-30T01-05-bbbb.jsonl');
+  fs.writeFileSync(council, J({ sessionId: 's2', kind: 'main' }) + J({ id: 'r1', type: 'user', content: [{ text: 'You are one of several independent experts on the Legion council giving a second opinion.\nuse yarn always' }] }));
+  const env = { ...process.env, LEGION_HOME: lh, GEMINI_HOME: gh };
+  const scan = () => spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'gemini-watch.js')], { encoding: 'utf8', env });
+  assert.strictEqual(scan().status, 0);
+  assert.strictEqual(scan().status, 0); // no duplicates
+  const ev = fs.readFileSync(path.join(lh, 'events.jsonl'), 'utf8').trim().split('\n').map(JSON.parse);
+  assert.strictEqual(ev.filter(e => e.type === 'agent-start' && e.agent === 'qa-gatekeeper' && e.tool === 'gemini').length, 1);
+  assert.strictEqual(ev.filter(e => e.type === 'agent-end' && e.agent === 'qa-gatekeeper').length, 1);
+  assert.strictEqual(ev.filter(e => e.type === 'prompt' && e.tool === 'gemini').length, 1);
+  assert.ok(!ev.some(e => /inglês|yarn|Legion council/.test(JSON.stringify(e))), 'injected context and council sessions are ignored');
+  const store = JSON.parse(fs.readFileSync(path.join(lh, 'memory', 'memory.json'), 'utf8'));
+  assert.ok(store.rules.some(r => /pnpm/.test(r.text)));
+  assert.ok(!store.rules.some(r => /yarn/.test(r.text)));
+  const u = m.geminiUsage(main);
+  assert.deepStrictEqual([u.tool, u.main.input, u.main.cacheRead, u.main.output, u.main.turns], ['Gemini', 600, 400, 150, 1]);
+  // a cancelled reply is rewound out of the cost
+  fs.appendFileSync(main, J({ id: 'g2', type: 'gemini', tokens: { input: 5000, output: 10, cached: 0 } }) + J({ $rewindTo: 'g1' }));
+  assert.strictEqual(m.geminiUsage(main).main.turns, 1);
+  assert.strictEqual(m.geminiUsage(council), null, 'council runs are not the user turn');
+  process.env.GEMINI_HOME = gh;
+  try { assert.strictEqual(m.newestGeminiUsage().file, main); } finally { delete process.env.GEMINI_HOME; }
+});

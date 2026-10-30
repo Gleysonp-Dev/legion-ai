@@ -41,7 +41,7 @@ const MARKETPLACE = 'legion-ai';
 const PLUGIN = 'legion';
 const BEGIN = '<!-- LEGION:BEGIN (managed by legion-ai installer — do not edit inside) -->';
 const END = '<!-- LEGION:END -->';
-const CLI_FILES = ['memory.js', 'council.js', 'mission-control.js', 'legion.js', 'codex-watch.js'];
+const CLI_FILES = ['memory.js', 'council.js', 'mission-control.js', 'legion.js', 'codex-watch.js', 'gemini-watch.js'];
 const TARGETS = ['claude', 'codex', 'gemini', 'cursor'];
 const LABEL = { claude: 'Claude Code', codex: 'Codex', gemini: 'Gemini CLI', cursor: 'Cursor' };
 

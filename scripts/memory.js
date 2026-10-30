@@ -355,7 +355,7 @@ function teamRecord(d) {
 /* ---------------- hooks ---------------- */
 
 // Keep stable copies of the Legion CLIs in ~/.legion/bin so agents, skills and other tools can call them.
-const CLI_FILES = ['memory.js', 'council.js', 'mission-control.js', 'legion.js', 'codex-watch.js'];
+const CLI_FILES = ['memory.js', 'council.js', 'mission-control.js', 'legion.js', 'codex-watch.js', 'gemini-watch.js'];
 function ensureCli() {
   try {
     const binDir = path.join(LEGION_HOME, 'bin');
@@ -568,13 +568,60 @@ function codexUsage(file) {
   };
 }
 
+// Gemini CLI chat log (~/.gemini/tmp/<project>/chats/session-*.jsonl): tokens of the current turn,
+// i.e. every model reply since the user's last real message. Replies can be rewritten ($rewindTo, same id twice).
+function geminiUsage(file) {
+  const order = [], byId = {};
+  let turnStart = null, users = [];
+  for (const r of readTail(file, 8 * 1024 * 1024)) {
+    if (r.$rewindTo) { const i = order.indexOf(r.$rewindTo); if (i >= 0) order.splice(i + 1).forEach(id => delete byId[id]); continue; }
+    if (!r.id || !r.type) continue;
+    if (!(r.id in byId)) order.push(r.id);
+    byId[r.id] = r;
+  }
+  let main = { input: 0, cacheWrite: 0, cacheRead: 0, output: 0, turns: 0 };
+  for (const id of order) {
+    const r = byId[id];
+    if (r.type === 'user') {
+      const t = Array.isArray(r.content) ? r.content.map(c => (c && c.text) || '').join('') : String(r.content || '');
+      if (/^\s*You are (an independent senior reviewer|one of several independent experts|a reviewer\.)/.test(t)) return null; // a Legion council run, not the user's turn
+      if (t && !/^\s*</.test(t)) { main = { input: 0, cacheWrite: 0, cacheRead: 0, output: 0, turns: 0 }; turnStart = r.timestamp || null; users.push(id); }
+    } else if (r.type === 'gemini' && r.tokens) {
+      const k = r.tokens;
+      main.input += Math.max(0, (k.input || 0) - (k.cached || 0));
+      main.cacheRead += k.cached || 0;
+      main.output += (k.output || 0) + (k.thoughts || 0);
+      main.turns++;
+    }
+  }
+  if (!users.length && !main.turns) return null;
+  return { tool: 'Gemini', file, turnStart, main, agents: {} };
+}
+
+// Newest Gemini chat that is the user's own session (council reviewer runs are skipped).
+function newestGeminiUsage() {
+  const root = path.join(process.env.GEMINI_HOME || path.join(os.homedir(), '.gemini'), 'tmp');
+  const files = [];
+  let projects = []; try { projects = fs.readdirSync(root); } catch { return null; }
+  for (const p of projects) {
+    const dir = path.join(root, p, 'chats');
+    let names = []; try { names = fs.readdirSync(dir); } catch { continue; }
+    for (const n of names) if (/^session-.*\.jsonl$/.test(n)) { const f = path.join(dir, n); try { files.push({ f, t: fs.statSync(f).mtimeMs }); } catch { /* gone */ } }
+  }
+  files.sort((a, b) => b.t - a.t);
+  for (const { f, t } of files.slice(0, 20)) { try { const u = geminiUsage(f); if (u) return Object.assign(u, { mtime: t }); } catch { /* next */ } }
+  return null;
+}
+
 const fmt = n => n >= 1e6 ? (n / 1e6).toFixed(2) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(1) + 'k' : String(n);
 
 function report(d, args) {
   let u = null;
   const forced = arg(args, '--transcript');
   const codex = args.includes('--codex');
-  if (forced) u = /codex/i.test(forced) ? codexUsage(forced) : claudeUsage(forced);
+  const gemini = args.includes('--gemini');
+  if (forced) u = /codex/i.test(forced) ? codexUsage(forced) : /gemini/i.test(forced) ? geminiUsage(forced) : claudeUsage(forced);
+  else if (gemini) u = newestGeminiUsage();
   else if (!codex && d.session && d.session.transcript && fs.existsSync(d.session.transcript)) u = claudeUsage(d.session.transcript);
   if (!u) {
     const f = newestFile(path.join(process.env.CODEX_HOME || path.join(os.homedir(), '.codex'), 'sessions'), /\.jsonl$/);
@@ -695,4 +742,4 @@ async function main(argv) {
 if (require.main === module) {
   main(process.argv.slice(2)).catch(e => { console.error(e.message); process.exitCode = 1; });
 }
-module.exports = { stripInjected, newestFile, isDuplicate, LEGION_HOME, load, save, logEvent, readEvents, classifyFeedback, judgePreviousTurn, noteActivity, addLesson, listLessons, teamRecord, scoresText, claudeUsage, codexUsage, report, ensureCli, extractPreferences, detectLang, isSensitive, categorize, addRule, observe, forget, learn, handlePrompt, renderProfile, empty, context };
+module.exports = { stripInjected, newestFile, isDuplicate, LEGION_HOME, load, save, logEvent, readEvents, classifyFeedback, judgePreviousTurn, noteActivity, addLesson, listLessons, teamRecord, scoresText, claudeUsage, codexUsage, geminiUsage, newestGeminiUsage, report, ensureCli, extractPreferences, detectLang, isSensitive, categorize, addRule, observe, forget, learn, handlePrompt, renderProfile, empty, context };
